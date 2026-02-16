@@ -11,6 +11,7 @@ A simple SwiftUI app demonstrating all features of the LinkForty iOS SDK.
 - ✅ Event tracking
 - ✅ Revenue tracking
 - ✅ Event queue management
+- ✅ Programmatic link creation
 - ✅ Data management (clear/reset)
 
 ## Running the Example
@@ -60,6 +61,12 @@ A simple SwiftUI app demonstrating all features of the LinkForty iOS SDK.
 2. Open the link in Safari
 3. The app should open automatically
 4. Check the "Deep Link Data" section for the parsed data
+
+### Test Link Creation
+
+1. Tap "Create Short Link" in the Link Creation section
+2. The created URL and short code will appear below the button
+3. Share the URL or open it in Safari to test the deep link flow
 
 ### Testing Events
 

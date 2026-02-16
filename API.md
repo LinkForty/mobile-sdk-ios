@@ -7,6 +7,8 @@ Complete API reference for the LinkForty iOS SDK.
 - [LinkForty](#linkforty) - Main SDK class
 - [LinkFortyConfig](#linkfortyconfig) - Configuration
 - [DeepLinkData](#deeplinkdata) - Deep link data model
+- [CreateLinkOptions](#createlinkoptions) - Link creation options
+- [CreateLinkResult](#createlinkresult) - Link creation result
 - [InstallResponse](#installresponse) - Attribution response
 - [LinkFortyError](#linkfortyerror) - Error types
 - [Type Aliases](#type-aliases) - Callback types
@@ -110,7 +112,7 @@ typealias DeferredDeepLinkCallback = (DeepLinkData?) -> Void
 ```swift
 LinkForty.shared.onDeferredDeepLink { deepLinkData in
     if let data = deepLinkData {
-        print("Attributed install: \(data.shortCode ?? "unknown")")
+        print("Attributed install: \(data.shortCode)")
         // Navigate to content
     } else {
         print("Organic install")
@@ -144,6 +146,42 @@ LinkForty.shared.onDeepLink { url, deepLinkData in
         // Navigate based on deep link data
     }
 }
+```
+
+---
+
+#### createLink(options:)
+
+Creates a short link programmatically.
+
+```swift
+func createLink(options: CreateLinkOptions) async throws -> CreateLinkResult
+```
+
+**Parameters:**
+- `options`: Link creation options (see [CreateLinkOptions](#createlinkoptions))
+
+**Returns:** `CreateLinkResult` with the shareable URL, short code, and link ID
+
+**Throws:**
+- `LinkFortyError.notInitialized` if SDK not initialized
+- `LinkFortyError.missingApiKey` if no API key configured
+
+**Note:** Requires an API key in `LinkFortyConfig`. If `templateId` is provided, uses the dashboard endpoint (`POST /api/links`). Otherwise, uses the simplified SDK endpoint (`POST /api/sdk/v1/links`) which auto-selects the organization's most recent template.
+
+**Example:**
+```swift
+let result = try await LinkForty.shared.createLink(
+    options: CreateLinkOptions(
+        deepLinkParameters: ["route": "VIDEO_VIEWER", "id": "vid123"],
+        title: "Check this out!",
+        utmParameters: UTMParameters(source: "app", campaign: "share")
+    )
+)
+
+print("Share this link: \(result.url)")
+print("Short code: \(result.shortCode)")
+print("Link ID: \(result.linkId)")
 ```
 
 ---
@@ -298,7 +336,7 @@ func getInstallData() -> DeepLinkData?
 **Example:**
 ```swift
 if let data = LinkForty.shared.getInstallData() {
-    print("Short code: \(data.shortCode ?? "unknown")")
+    print("Short code: \(data.shortCode)")
     print("UTM source: \(data.utmParameters?.source ?? "none")")
 }
 ```
@@ -418,28 +456,35 @@ Deep link data model containing parsed link information.
 ### Properties
 
 ```swift
-public let shortCode: String?           // LinkForty short code
+public let shortCode: String            // LinkForty short code (required)
 public let iosURL: String?             // iOS deep link URL
 public let androidURL: String?         // Android deep link URL
 public let webURL: String?             // Fallback web URL
 public let utmParameters: UTMParameters?  // UTM tracking parameters
-public let customParameters: [String: String]  // Custom parameters
-public let createdAt: Date?            // Link creation date
-public let expiresAt: Date?            // Link expiration date
+public let customParameters: [String: String]?  // Custom query parameters
+public let deepLinkPath: String?       // Deep link path for in-app routing (e.g., "/product/123")
+public let appScheme: String?          // App URI scheme (e.g., "myapp")
+public let clickedAt: Date?            // When the link was clicked (ISO 8601)
+public let linkId: String?             // Link UUID from the backend
 ```
 
 ### Example
 
 ```swift
 if let data = deepLinkData {
-    print("Short code: \(data.shortCode ?? "none")")
+    print("Short code: \(data.shortCode)")
+
+    // Use deep link path for in-app routing
+    if let path = data.deepLinkPath {
+        navigateToPath(path)
+    }
 
     if let utm = data.utmParameters {
         print("Source: \(utm.source ?? "unknown")")
         print("Campaign: \(utm.campaign ?? "unknown")")
     }
 
-    if let productId = data.customParameters["product_id"] {
+    if let productId = data.customParameters?["product_id"] {
         navigateToProduct(id: productId)
     }
 }
@@ -474,9 +519,52 @@ if response.attributed {
     print("Matched factors: \(response.matchedFactors)")
 
     if let data = response.deepLinkData {
-        print("Short code: \(data.shortCode ?? "unknown")")
+        print("Short code: \(data.shortCode)")
     }
 }
+```
+
+---
+
+## CreateLinkOptions
+
+Options for creating a short link programmatically.
+
+### Initializer
+
+```swift
+init(
+    templateId: String? = nil,
+    templateSlug: String? = nil,
+    deepLinkParameters: [String: String]? = nil,
+    title: String? = nil,
+    description: String? = nil,
+    customCode: String? = nil,
+    utmParameters: UTMParameters? = nil
+)
+```
+
+**Parameters:**
+- `templateId`: Template UUID (auto-selected if omitted)
+- `templateSlug`: Template slug (only needed with `templateId`)
+- `deepLinkParameters`: Deep link parameters for in-app routing (e.g., `["route": "VIDEO_VIEWER", "id": "..."]`)
+- `title`: Link title
+- `description`: Link description
+- `customCode`: Custom short code (auto-generated if omitted)
+- `utmParameters`: UTM parameters for campaign tracking
+
+---
+
+## CreateLinkResult
+
+Result of creating a short link.
+
+### Properties
+
+```swift
+public let url: String       // Full shareable URL (e.g., "https://go.yourdomain.com/tmpl/abc123")
+public let shortCode: String // The generated short code
+public let linkId: String    // Link UUID
 ```
 
 ---
@@ -500,7 +588,7 @@ case invalidConfiguration(String)
 case networkError(Error)
     // Network request failed
 
-case invalidResponse(statusCode: Int?, message: String)
+case invalidResponse(statusCode: Int?, message: String?)
     // Invalid or unexpected server response
 
 case decodingError(Error)
@@ -511,6 +599,12 @@ case encodingError(Error)
 
 case invalidEventData(String)
     // Invalid event data
+
+case invalidDeepLinkURL(String)
+    // Invalid deep link URL
+
+case missingApiKey
+    // API key is required for this operation (e.g., createLink)
 ```
 
 ### Example

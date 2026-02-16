@@ -19,6 +19,7 @@ public final class LinkForty {
     // MARK: - Properties
 
     private var config: LinkFortyConfig?
+    private var networkManager: NetworkManager?
     private var attributionManager: AttributionManager?
     private var eventTracker: EventTracker?
     private var deepLinkHandler: DeepLinkHandler?
@@ -68,6 +69,8 @@ public final class LinkForty {
                 let networkManager = NetworkManager(config: config)
                 let fingerprintCollector = FingerprintCollector()
 
+                self.networkManager = networkManager
+
                 self.attributionManager = AttributionManager(
                     networkManager: networkManager,
                     storageManager: storageManager,
@@ -79,7 +82,13 @@ public final class LinkForty {
                     storageManager: storageManager
                 )
 
-                self.deepLinkHandler = DeepLinkHandler()
+                let handler = DeepLinkHandler()
+                handler.configure(
+                    networkManager: networkManager,
+                    fingerprintCollector: fingerprintCollector,
+                    baseURL: config.baseURL
+                )
+                self.deepLinkHandler = handler
 
                 // Mark as initialized
                 self.isInitialized = true
@@ -205,6 +214,60 @@ public final class LinkForty {
         eventTracker?.clearQueue()
     }
 
+    // MARK: - Link Creation
+
+    /// Creates a short link programmatically
+    ///
+    /// - Parameter options: Link creation options
+    /// - Returns: Result containing the shareable URL, short code, and link ID
+    /// - Throws: `LinkFortyError.notInitialized` if SDK not initialized,
+    ///           `LinkFortyError.missingApiKey` if no API key configured
+    ///
+    /// - Note: Requires an API key in `LinkFortyConfig`.
+    ///   If `templateId` is provided, uses the dashboard endpoint (`POST /api/links`).
+    ///   Otherwise, uses the simplified SDK endpoint (`POST /api/sdk/v1/links`)
+    ///   which auto-selects the organization's most recent template.
+    public func createLink(options: CreateLinkOptions) async throws -> CreateLinkResult {
+        guard isInitialized else {
+            throw LinkFortyError.notInitialized
+        }
+
+        guard let config = config, config.apiKey != nil else {
+            throw LinkFortyError.missingApiKey
+        }
+
+        guard let networkManager = networkManager else {
+            throw LinkFortyError.notInitialized
+        }
+
+        if options.templateId != nil {
+            // Use dashboard endpoint with explicit templateId
+            let response: DashboardCreateLinkResponse = try await networkManager.request(
+                endpoint: "/api/links",
+                method: .post,
+                body: options
+            )
+
+            // Construct URL from parts
+            let templateSlug = options.templateSlug ?? ""
+            let pathSegment = templateSlug.isEmpty ? response.shortCode : "\(templateSlug)/\(response.shortCode)"
+            let url = config.baseURL.appendingPathComponent(pathSegment).absoluteString
+
+            return CreateLinkResult(
+                url: url,
+                shortCode: response.shortCode,
+                linkId: response.id
+            )
+        } else {
+            // Use simplified SDK endpoint (auto-selects template)
+            return try await networkManager.request(
+                endpoint: "/api/sdk/v1/links",
+                method: .post,
+                body: options
+            )
+        }
+    }
+
     // MARK: - Attribution Data
 
     /// Returns the install ID if available
@@ -250,6 +313,7 @@ public final class LinkForty {
     public func reset() {
         initQueue.sync {
             config = nil
+            networkManager = nil
             attributionManager = nil
             eventTracker = nil
             deepLinkHandler = nil

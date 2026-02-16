@@ -35,6 +35,8 @@ class AppState: ObservableObject {
     @Published var queuedEvents: Int = 0
     @Published var isInitialized: Bool = false
     @Published var errorMessage: String?
+    @Published var createdLinkURL: String?
+    @Published var createdLinkShortCode: String?
 
     init() {
         initializeSDK()
@@ -137,6 +139,28 @@ class AppState: ObservableObject {
         }
     }
 
+    func createLink() {
+        Task { @MainActor in
+            do {
+                let result = try await LinkForty.shared.createLink(
+                    options: CreateLinkOptions(
+                        deepLinkParameters: ["route": "EXAMPLE", "id": "123"],
+                        title: "Example Link"
+                    )
+                )
+
+                createdLinkURL = result.url
+                createdLinkShortCode = result.shortCode
+
+                print("Link created: \(result.url)")
+
+            } catch {
+                errorMessage = error.localizedDescription
+                print("Link creation failed: \(error)")
+            }
+        }
+    }
+
     func flushEvents() {
         Task { @MainActor in
             await LinkForty.shared.flushEvents()
@@ -152,6 +176,8 @@ class AppState: ObservableObject {
         deepLinkData = nil
         eventCount = 0
         queuedEvents = 0
-        print("✅ Data cleared")
+        createdLinkURL = nil
+        createdLinkShortCode = nil
+        print("Data cleared")
     }
 }

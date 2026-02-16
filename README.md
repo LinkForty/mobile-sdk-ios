@@ -15,6 +15,7 @@
 - **Event Tracking**: Track in-app events and conversions
 - **Offline Support**: Queue events when offline with automatic retry
 - **Privacy-First**: No IDFA collection, complies with Apple's privacy requirements
+- **Programmatic Link Creation**: Create short links directly from your app
 - **Zero Dependencies**: Lightweight, no third-party dependencies
 - **Swift-Native**: 100% Swift, modern async/await APIs
 
@@ -134,10 +135,15 @@ LinkForty.shared.onDeepLink { url, deepLinkData in
     print("Deep link opened: \(url)")
     if let data = deepLinkData {
         print("Link data: \(data)")
-        // Navigate to content
+        // Navigate using deep link path
+        if let path = data.deepLinkPath {
+            navigateToPath(path)
+        }
     }
 }
 ```
+
+> **Server-side resolution:** When the SDK is initialized, deep links are automatically resolved via the server to provide enriched data including `deepLinkPath`, `appScheme`, and `linkId`. If the server is unreachable, the SDK falls back to local URL parsing.
 
 ### 4. Track Events
 
@@ -162,6 +168,23 @@ try await LinkForty.shared.trackRevenue(
     properties: ["product_id": "123"]
 )
 ```
+
+### 5. Create Links Programmatically
+
+```swift
+let result = try await LinkForty.shared.createLink(
+    options: CreateLinkOptions(
+        deepLinkParameters: ["route": "VIDEO_VIEWER", "id": "vid123"],
+        title: "Check this out!",
+        utmParameters: UTMParameters(source: "app", campaign: "share")
+    )
+)
+
+print("Share this link: \(result.url)")
+// e.g., "https://go.yourdomain.com/tmpl/abc123"
+```
+
+> **Note:** Requires an API key in `LinkFortyConfig`. See [API Reference](API.md#createlinkoptions) for all options.
 
 ## Advanced Usage
 

@@ -273,6 +273,24 @@ final class LinkFortyTests: XCTestCase {
         XCTAssertNoThrow(try selfHostedConfig.validate())
     }
 
+    // MARK: - Link Creation Tests
+
+    func testCreateLinkBeforeInitializeThrows() async {
+        // Act & Assert
+        do {
+            _ = try await LinkForty.shared.createLink(options: CreateLinkOptions())
+            XCTFail("Should throw error when not initialized")
+        } catch let error as LinkFortyError {
+            if case .notInitialized = error {
+                // Expected
+            } else {
+                XCTFail("Wrong error type: \(error)")
+            }
+        } catch {
+            XCTFail("Unexpected error type")
+        }
+    }
+
     // MARK: - Thread Safety Tests
 
     func testConcurrentResetCalls() {

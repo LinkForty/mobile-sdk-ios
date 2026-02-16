@@ -32,6 +32,11 @@ struct ContentView: View {
 
                     Divider()
 
+                    // Link Creation Section
+                    LinkCreationSection(appState: appState)
+
+                    Divider()
+
                     // Deep Link Section
                     DeepLinkSection(appState: appState)
 
@@ -194,6 +199,46 @@ struct EventsSection: View {
 }
 
 @available(iOS 14.0, *)
+struct LinkCreationSection: View {
+    @ObservedObject var appState: AppState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Link Creation")
+                .font(.headline)
+
+            Button(action: {
+                appState.createLink()
+            }) {
+                HStack {
+                    Image(systemName: "link.badge.plus")
+                    Text("Create Short Link")
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.purple)
+                .foregroundColor(.white)
+                .cornerRadius(8)
+            }
+
+            if let url = appState.createdLinkURL {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("URL: \(url)")
+                        .font(.caption)
+                    if let shortCode = appState.createdLinkShortCode {
+                        Text("Short Code: \(shortCode)")
+                            .font(.caption)
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color.gray.opacity(0.1))
+        .cornerRadius(10)
+    }
+}
+
+@available(iOS 14.0, *)
 struct DeepLinkSection: View {
     @ObservedObject var appState: AppState
 
@@ -204,14 +249,28 @@ struct DeepLinkSection: View {
 
             if let data = appState.deepLinkData {
                 VStack(alignment: .leading, spacing: 5) {
-                    if let shortCode = data.shortCode {
-                        Text("Short Code: \(shortCode)")
-                            .font(.caption)
-                    }
+                    Text("Short Code: \(data.shortCode)")
+                        .font(.caption)
 
                     if let iosURL = data.iosURL {
                         Text("iOS URL: \(iosURL)")
                             .font(.caption)
+                    }
+
+                    if let deepLinkPath = data.deepLinkPath {
+                        Text("Deep Link Path: \(deepLinkPath)")
+                            .font(.caption)
+                    }
+
+                    if let appScheme = data.appScheme {
+                        Text("App Scheme: \(appScheme)")
+                            .font(.caption)
+                    }
+
+                    if let linkId = data.linkId {
+                        Text("Link ID: \(linkId)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
 
                     if let utm = data.utmParameters {
@@ -225,8 +284,8 @@ struct DeepLinkSection: View {
                         }
                     }
 
-                    if !data.customParameters.isEmpty {
-                        Text("Custom Params: \(data.customParameters.count)")
+                    if let params = data.customParameters, !params.isEmpty {
+                        Text("Custom Params: \(params.count)")
                             .font(.caption)
                     }
                 }

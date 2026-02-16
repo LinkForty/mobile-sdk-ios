@@ -400,33 +400,3 @@ final class AttributionManagerTests: XCTestCase {
         XCTAssertNil(result.deepLinkData)
     }
 }
-
-// MARK: - Mock Fingerprint Collector
-
-class MockFingerprintCollector: FingerprintCollectorProtocol {
-    var collectCalled = false
-    var lastAttributionWindow: Int?
-    var lastDeviceId: String?
-
-    func collectFingerprint(
-        attributionWindowHours: Int,
-        deviceId: String? = nil
-    ) -> DeviceFingerprint {
-        collectCalled = true
-        lastAttributionWindow = attributionWindowHours
-        lastDeviceId = deviceId
-
-        return DeviceFingerprint(
-            userAgent: "TestApp/1.0 iOS/15.0",
-            timezone: "America/New_York",
-            language: "en-US",
-            screenWidth: 1170,
-            screenHeight: 2532,
-            platform: "iOS",
-            platformVersion: "15.0",
-            appVersion: "1.0.0",
-            deviceId: deviceId,
-            attributionWindowHours: attributionWindowHours
-        )
-    }
-}

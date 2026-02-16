@@ -28,6 +28,12 @@ public struct DeepLinkData: Codable, Equatable {
     /// Custom query parameters from the link
     public let customParameters: [String: String]?
 
+    /// Deep link path for in-app routing (e.g., "/product/123")
+    public let deepLinkPath: String?
+
+    /// App URI scheme (e.g., "myapp")
+    public let appScheme: String?
+
     /// When the link was clicked (for attributed installs)
     public let clickedAt: Date?
 
@@ -44,6 +50,8 @@ public struct DeepLinkData: Codable, Equatable {
         webURL: String? = nil,
         utmParameters: UTMParameters? = nil,
         customParameters: [String: String]? = nil,
+        deepLinkPath: String? = nil,
+        appScheme: String? = nil,
         clickedAt: Date? = nil,
         linkId: String? = nil
     ) {
@@ -53,6 +61,8 @@ public struct DeepLinkData: Codable, Equatable {
         self.webURL = webURL
         self.utmParameters = utmParameters
         self.customParameters = customParameters
+        self.deepLinkPath = deepLinkPath
+        self.appScheme = appScheme
         self.clickedAt = clickedAt
         self.linkId = linkId
     }
@@ -66,6 +76,8 @@ public struct DeepLinkData: Codable, Equatable {
         case webURL = "webUrl"
         case utmParameters
         case customParameters
+        case deepLinkPath
+        case appScheme
         case clickedAt
         case linkId
     }
@@ -79,6 +91,8 @@ public struct DeepLinkData: Codable, Equatable {
         webURL = try container.decodeIfPresent(String.self, forKey: .webURL)
         utmParameters = try container.decodeIfPresent(UTMParameters.self, forKey: .utmParameters)
         customParameters = try container.decodeIfPresent([String: String].self, forKey: .customParameters)
+        deepLinkPath = try container.decodeIfPresent(String.self, forKey: .deepLinkPath)
+        appScheme = try container.decodeIfPresent(String.self, forKey: .appScheme)
         linkId = try container.decodeIfPresent(String.self, forKey: .linkId)
 
         // Decode date from ISO 8601 string
@@ -99,6 +113,8 @@ public struct DeepLinkData: Codable, Equatable {
         try container.encodeIfPresent(webURL, forKey: .webURL)
         try container.encodeIfPresent(utmParameters, forKey: .utmParameters)
         try container.encodeIfPresent(customParameters, forKey: .customParameters)
+        try container.encodeIfPresent(deepLinkPath, forKey: .deepLinkPath)
+        try container.encodeIfPresent(appScheme, forKey: .appScheme)
         try container.encodeIfPresent(linkId, forKey: .linkId)
 
         // Encode date as ISO 8601 string
@@ -117,6 +133,8 @@ extension DeepLinkData: CustomStringConvertible {
         DeepLinkData(
             shortCode: \(shortCode),
             iosURL: \(iosURL ?? "nil"),
+            deepLinkPath: \(deepLinkPath ?? "nil"),
+            appScheme: \(appScheme ?? "nil"),
             linkId: \(linkId ?? "nil"),
             utmSource: \(utmParameters?.source ?? "nil")
         )

@@ -38,6 +38,9 @@ public enum LinkFortyError: Error {
 
     /// Invalid deep link URL
     case invalidDeepLinkURL(String)
+
+    /// API key is required for this operation
+    case missingApiKey
 }
 
 // MARK: - LocalizedError
@@ -73,6 +76,9 @@ extension LinkFortyError: LocalizedError {
 
         case .invalidDeepLinkURL(let message):
             return "Invalid deep link URL: \(message)"
+
+        case .missingApiKey:
+            return "API key is required for this operation. Provide an apiKey in LinkFortyConfig."
         }
     }
 }
