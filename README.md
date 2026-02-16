@@ -3,7 +3,7 @@
 **Native iOS SDK for deep linking, mobile attribution, and conversion tracking.**
 
 [![Swift Version](https://img.shields.io/badge/Swift-5.9+-orange.svg)](https://swift.org)
-[![iOS Version](https://img.shields.io/badge/iOS-13.0+-blue.svg)](https://www.apple.com/ios)
+[![iOS Version](https://img.shields.io/badge/iOS-16.0+-blue.svg)](https://www.apple.com/ios)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![SPM Compatible](https://img.shields.io/badge/SPM-compatible-brightgreen.svg)](https://swift.org/package-manager)
 
@@ -21,8 +21,8 @@
 
 ## Requirements
 
-- iOS 13.0+
-- Xcode 14.0+
+- iOS 16.0+
+- Xcode 15.0+
 - Swift 5.9+
 
 ## Installation

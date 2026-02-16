@@ -8,12 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+## [1.1.3] - 2026-02-16
+- Minimum deployment target bumped from iOS 13.0 to iOS 16.0
+- Minimum Xcode version bumped from 14.0 to 15.0
 ## [1.1.2] - 2026-02-16
-### Changed
-- Split `DeepLinkHandlerTests.swift` (553 lines) into `DeepLinkHandlerTests.swift` (361 lines) and `DeepLinkServerResolutionTests.swift` (218 lines) to satisfy SwiftLint `file_length` rule
-
 ---
-
+### Changed
+- Split `DeepLinkHandlerTests.swift` into `DeepLinkHandlerTests.swift` and `DeepLinkServerResolutionTests.swift` to satisfy SwiftLint `file_length` rule
+---
 ## [1.1.1] - 2026-02-16
 ### Added
 - 28 new unit tests covering server-side URL resolution, link creation models, `DeepLinkData` model (initialization, JSON encoding/decoding, CodingKeys, Equatable, round-trip), and pre-initialization error handling
@@ -40,9 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - iOS 15 support from CI test matrix
 
 ---
-
 ## [1.1.0] - 2026-02-16
-
 ### Added
 - `createLink(options:)` method for programmatic short link creation from the app
 - `CreateLinkOptions` and `CreateLinkResult` public types

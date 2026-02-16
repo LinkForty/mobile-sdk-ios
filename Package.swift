@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "LinkFortySDK",
     platforms: [
-        .iOS(.v13)
+        .iOS(.v16)
     ],
     products: [
         // The main LinkForty SDK library
