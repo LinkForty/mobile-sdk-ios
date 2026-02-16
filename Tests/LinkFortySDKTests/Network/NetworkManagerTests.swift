@@ -6,8 +6,8 @@
 //  Licensed under the MIT License
 //
 
-import XCTest
 @testable import LinkFortySDK
+import XCTest
 
 final class NetworkManagerTests: XCTestCase {
     var sut: NetworkManager!
@@ -206,7 +206,7 @@ final class NetworkManagerTests: XCTestCase {
 
     func test401UnauthorizedError() async {
         // Arrange
-        mockSession.mockData = "Unauthorized".data(using: .utf8)!
+        mockSession.mockData = Data("Unauthorized".utf8)
         mockSession.mockResponse = HTTPURLResponse(
             url: URL(string: "https://api.example.com/test")!,
             statusCode: 401,
@@ -259,7 +259,7 @@ final class NetworkManagerTests: XCTestCase {
 
     func testInvalidJSONResponse() async {
         // Arrange
-        mockSession.mockData = "not json".data(using: .utf8)!
+        mockSession.mockData = Data("not json".utf8)
         mockSession.mockResponse = HTTPURLResponse(
             url: URL(string: "https://api.example.com/test")!,
             statusCode: 200,

@@ -6,8 +6,8 @@
 //  Licensed under the MIT License
 //
 
-import XCTest
 @testable import LinkFortySDK
+import XCTest
 
 final class DeepLinkDataTests: XCTestCase {
 
@@ -66,7 +66,7 @@ final class DeepLinkDataTests: XCTestCase {
 
     func testDecodingWithNewFields() throws {
         // Arrange
-        let json = """
+        let json = Data("""
         {
             "shortCode": "new123",
             "iosUrl": "myapp://test",
@@ -75,7 +75,7 @@ final class DeepLinkDataTests: XCTestCase {
             "clickedAt": "2025-06-15T12:00:00Z",
             "linkId": "link-uuid-2"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         // Act
         let data = try JSONDecoder().decode(DeepLinkData.self, from: json)
@@ -91,12 +91,12 @@ final class DeepLinkDataTests: XCTestCase {
 
     func testDecodingWithoutNewFieldsBackwardCompat() throws {
         // Arrange — JSON from a v1.0.0 server that doesn't return new fields
-        let json = """
+        let json = Data("""
         {
             "shortCode": "old123",
             "iosUrl": "myapp://legacy"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         // Act
         let data = try JSONDecoder().decode(DeepLinkData.self, from: json)
@@ -112,12 +112,12 @@ final class DeepLinkDataTests: XCTestCase {
 
     func testDecodingClickedAtISO8601() throws {
         // Arrange
-        let json = """
+        let json = Data("""
         {
             "shortCode": "date123",
             "clickedAt": "2025-01-15T08:30:00Z"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         // Act
         let data = try JSONDecoder().decode(DeepLinkData.self, from: json)
@@ -192,14 +192,14 @@ final class DeepLinkDataTests: XCTestCase {
 
     func testCodingKeysMappings() throws {
         // Arrange — use JSON keys that match CodingKeys (iosUrl, androidUrl, webUrl)
-        let json = """
+        let json = Data("""
         {
             "shortCode": "keys123",
             "iosUrl": "ios://test",
             "androidUrl": "android://test",
             "webUrl": "https://test.com"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         // Act
         let data = try JSONDecoder().decode(DeepLinkData.self, from: json)

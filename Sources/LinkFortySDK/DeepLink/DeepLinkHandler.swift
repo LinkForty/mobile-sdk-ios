@@ -185,7 +185,7 @@ final class DeepLinkHandler {
             URLQueryItem(name: "fp_sw", value: String(fingerprint.screenWidth)),
             URLQueryItem(name: "fp_sh", value: String(fingerprint.screenHeight)),
             URLQueryItem(name: "fp_platform", value: fingerprint.platform),
-            URLQueryItem(name: "fp_pv", value: fingerprint.platformVersion),
+            URLQueryItem(name: "fp_pv", value: fingerprint.platformVersion)
         ]
 
         var components = URLComponents()

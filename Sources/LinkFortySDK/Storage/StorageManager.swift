@@ -68,9 +68,7 @@ final class StorageManager {
                 let encoded = try self.encoder.encode(data)
                 self.userDefaults.set(encoded, forKey: StorageKeys.installData)
             } catch {
-                if LinkFortyLogger.isDebugEnabled {
-                    print("[LinkForty] Failed to encode install data: \(error)")
-                }
+                LinkFortyLogger.log("Failed to encode install data: \(error)")
             }
         }
     }
@@ -86,9 +84,7 @@ final class StorageManager {
             do {
                 return try decoder.decode(DeepLinkData.self, from: data)
             } catch {
-                if LinkFortyLogger.isDebugEnabled {
-                    print("[LinkForty] Failed to decode install data: \(error)")
-                }
+                LinkFortyLogger.log("Failed to decode install data: \(error)")
                 return nil
             }
         }
@@ -136,6 +132,7 @@ struct LinkFortyLogger {
 
     static func log(_ message: String) {
         if isDebugEnabled {
+            // swiftlint:disable:next no_print
             print("[LinkForty] \(message)")
         }
     }

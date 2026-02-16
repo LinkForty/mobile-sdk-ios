@@ -6,8 +6,8 @@
 //  Licensed under the MIT License
 //
 
-import XCTest
 @testable import LinkFortySDK
+import XCTest
 
 @available(iOS 13.0, macOS 10.15, *)
 final class LinkFortyTests: XCTestCase {

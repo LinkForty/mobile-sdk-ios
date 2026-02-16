@@ -6,11 +6,11 @@
 //  Licensed under the MIT License
 //
 
+@testable import LinkFortySDK
 import XCTest
 #if canImport(UIKit)
 import UIKit
 #endif
-@testable import LinkFortySDK
 
 final class FingerprintCollectorTests: XCTestCase {
     var sut: FingerprintCollector!

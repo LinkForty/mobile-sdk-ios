@@ -6,8 +6,8 @@
 //  Licensed under the MIT License
 //
 
-import XCTest
 @testable import LinkFortySDK
+import XCTest
 
 final class CreateLinkTests: XCTestCase {
 
@@ -60,13 +60,13 @@ final class CreateLinkTests: XCTestCase {
 
     func testCreateLinkResultDecodingValid() throws {
         // Arrange
-        let json = """
+        let json = Data("""
         {
             "url": "https://go.example.com/promo/abc123",
             "shortCode": "abc123",
             "linkId": "link-uuid-1"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         // Act
         let result = try JSONDecoder().decode(CreateLinkResult.self, from: json)
@@ -79,12 +79,12 @@ final class CreateLinkTests: XCTestCase {
 
     func testCreateLinkResultDecodingMissingFieldThrows() {
         // Arrange — missing linkId
-        let json = """
+        let json = Data("""
         {
             "url": "https://go.example.com/abc123",
             "shortCode": "abc123"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         // Act & Assert
         XCTAssertThrowsError(try JSONDecoder().decode(CreateLinkResult.self, from: json))
@@ -94,12 +94,12 @@ final class CreateLinkTests: XCTestCase {
 
     func testDashboardCreateLinkResponseDecodingSnakeCase() throws {
         // Arrange
-        let json = """
+        let json = Data("""
         {
             "id": "link-uuid-2",
             "short_code": "xyz789"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         // Act
         let response = try JSONDecoder().decode(DashboardCreateLinkResponse.self, from: json)
@@ -111,12 +111,12 @@ final class CreateLinkTests: XCTestCase {
 
     func testDashboardCreateLinkResponseCamelCaseFailsDecoding() {
         // Arrange — camelCase keys should NOT work (expects snake_case)
-        let json = """
+        let json = Data("""
         {
             "id": "link-uuid-3",
             "shortCode": "abc456"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         // Act
         let response = try? JSONDecoder().decode(DashboardCreateLinkResponse.self, from: json)

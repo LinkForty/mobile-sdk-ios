@@ -6,8 +6,8 @@
 //  Licensed under the MIT License
 //
 
-import XCTest
 @testable import LinkFortySDK
+import XCTest
 
 final class URLParserTests: XCTestCase {
 
