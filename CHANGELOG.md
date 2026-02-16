@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+## [1.1.2] - 2026-02-16
+### Changed
+- Split `DeepLinkHandlerTests.swift` (553 lines) into `DeepLinkHandlerTests.swift` (361 lines) and `DeepLinkServerResolutionTests.swift` (218 lines) to satisfy SwiftLint `file_length` rule
+
+---
 
 ## [1.1.1] - 2026-02-16
 ### Added
