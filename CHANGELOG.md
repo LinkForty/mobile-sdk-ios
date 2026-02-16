@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+## [1.1.1] - 2026-02-16
+### Added
+- 28 new unit tests covering server-side URL resolution, link creation models, `DeepLinkData` model (initialization, JSON encoding/decoding, CodingKeys, Equatable, round-trip), and pre-initialization error handling
+- `NetworkManagerProtocol` and `FingerprintCollectorProtocol` conformance on `DeepLinkHandler` to enable dependency injection for testing
+- Shared `MockFingerprintCollector` test helper in `TestHelpers/MockHelpers.swift`
+- `clickedAt` and `linkId` fields on `DeepLinkData`
+- `invalidDeepLinkURL` error case on `LinkFortyError`
+- Link creation section in example app (`LinkCreationSection`) with display of `deepLinkPath`, `appScheme`, and `linkId`
+
+### Changed
+- `DeepLinkHandler` now uses protocol types (`NetworkManagerProtocol`, `FingerprintCollectorProtocol`) instead of concrete types for dependency injection
+- `StorageManager` debug logging now uses `LinkFortyLogger` instead of raw `print()` calls
+- CI test matrix updated from iOS 15/16/17 to iOS 16/17/18 on macOS 15 with Xcode 16
+- Replaced `.data(using: .utf8)!` with `Data(_:utf8)` initializer across test files
+
+### Fixed
+- SwiftLint `no_print` custom rule regex changed from `print\(` to `\bprint\(` to prevent false positives on methods like `collectFingerprint()`
+- SwiftLint configuration: removed contradictory `line_length` disable, removed overly strict `force_unwrapping` opt-in rule, added `non_optional_string_data_conversion` opt-in rule
+- Sorted imports in all 11 test files to satisfy SwiftLint `sorted_imports` rule
+- Example app bugs: `shortCode` treated as optional when non-optional, `customParameters.isEmpty` called on optional without unwrapping
+- API documentation (`API.md`): corrected `shortCode` type from `String?` to `String`, `customParameters` from `[String: String]` to `[String: String]?`, removed stale `createdAt`/`expiresAt` fields, added missing types and error cases
+
+### Removed
+- iOS 15 support from CI test matrix
+
+---
+
 ## [1.1.0] - 2026-02-16
 
 ### Added
