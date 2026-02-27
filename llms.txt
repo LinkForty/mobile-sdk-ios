@@ -1,0 +1,389 @@
+# LinkFortySDK (iOS)
+
+> Native Swift SDK for LinkForty — an open-source mobile attribution and deep link management platform. Handles Universal Links, deferred deep linking (install attribution), in-app event tracking with offline queue, revenue tracking, and link creation. Zero external dependencies. Works with LinkForty Cloud (linkforty.com) or self-hosted Core instances.
+
+## Requirements
+
+- iOS 16.0+
+- Swift 5.9+
+- Xcode 15.0+
+
+## Installation
+
+### Swift Package Manager (Recommended)
+
+In Xcode: File → Add Package Dependencies → Enter URL:
+
+```
+https://github.com/linkforty/mobile-sdk-ios
+```
+
+Select version: Up to Next Major (1.0.0).
+
+### CocoaPods
+
+```ruby
+# Podfile
+pod 'LinkFortySDK', '~> 1.0'
+```
+
+Then run `pod install`.
+
+### Carthage
+
+```
+github "LinkForty/mobile-sdk-ios" ~> 1.0
+```
+
+## Swift Types
+
+```swift
+struct LinkFortyConfig {
+    let baseURL: URL
+    let apiKey: String?                  // nil = no link creation
+    let debug: Bool                      // default: false
+    let attributionWindowHours: Int      // default: 168 (7 days), range: 1-2160
+}
+
+struct DeepLinkData {
+    let shortCode: String
+    let iosURL: String?
+    let androidURL: String?
+    let webURL: String?
+    let utmParameters: UTMParameters?
+    /// Custom key-value parameters set when the link was created
+    let customParameters: [String: String]?
+    /// In-app destination path (e.g., "/product/123")
+    let deepLinkPath: String?
+    /// Custom URI scheme (e.g., "myapp")
+    let appScheme: String?
+    let clickedAt: Date?
+    let linkId: String?
+}
+
+struct UTMParameters {
+    let source: String?
+    let medium: String?
+    let campaign: String?
+    let term: String?
+    let content: String?
+}
+
+struct InstallResponse {
+    let installId: String
+    let attributed: Bool
+    /// Attribution confidence score (0-100)
+    let confidenceScore: Int
+    /// Matched fingerprint factors (e.g., ["ip", "user_agent", "timezone"])
+    let matchedFactors: [String]
+    let deepLinkData: DeepLinkData?
+}
+
+struct CreateLinkOptions {
+    let templateId: String?              // auto-selected when nil
+    let templateSlug: String?
+    let deepLinkParameters: [String: String]?
+    let title: String?
+    let description: String?
+    let customCode: String?
+    let utmParameters: UTMParameters?
+}
+
+struct CreateLinkResult {
+    let url: String                      // full shareable URL
+    let shortCode: String
+    let linkId: String
+}
+
+/// All errors thrown by the SDK
+enum LinkFortyError: Error {
+    case notInitialized
+    case alreadyInitialized
+    case invalidConfiguration(String)
+    case networkError(Error)
+    case invalidResponse(statusCode: Int?, message: String?)
+    case decodingError(Error)
+    case encodingError(Error)
+    case invalidEventData(String)
+    case invalidDeepLinkURL(String)
+    case missingApiKey
+}
+```
+
+## SDK API
+
+The SDK uses a singleton: `LinkForty.shared`. All async methods use Swift async/await.
+
+```swift
+import LinkFortySDK
+```
+
+### initialize(config:) async throws -> InstallResponse
+
+Initialize the SDK, report the install, and return attribution data. Must be called before any other method.
+
+```swift
+let config = LinkFortyConfig(
+    baseURL: URL(string: "https://go.yourdomain.com")!,
+    apiKey: "lf_live_abc123",   // optional — only for createLink()
+    debug: true,
+    attributionWindowHours: 168
+)
+
+let response = try await LinkForty.shared.initialize(config: config)
+
+print("Install ID:", response.installId)
+print("Attributed:", response.attributed)
+print("Confidence:", response.confidenceScore)
+```
+
+### onDeepLink(\_ callback:)
+
+Register a callback for direct deep links — fires when user taps a Universal Link and the app is already installed.
+
+```swift
+LinkForty.shared.onDeepLink { url, data in
+    print("Deep link opened:", url)
+    if let route = data?.customParameters?["route"],
+       let id = data?.customParameters?["id"] {
+        NavigationManager.shared.navigate(to: route, id: id)
+    }
+}
+```
+
+### onDeferredDeepLink(\_ callback:)
+
+Register a callback for deferred deep links — fires on first app launch if the install was attributed to a link click.
+
+```swift
+LinkForty.shared.onDeferredDeepLink { data in
+    if let data = data {
+        print("Attributed install from:", data.shortCode)
+        if let route = data.customParameters?["route"],
+           let id = data.customParameters?["id"] {
+            NavigationManager.shared.navigate(to: route, id: id)
+        }
+    }
+}
+```
+
+### handleDeepLink(url:)
+
+Forward Universal Links to the SDK for processing. Call this from your AppDelegate or SwiftUI `.onOpenURL`.
+
+```swift
+LinkForty.shared.handleDeepLink(url: url)
+```
+
+### trackEvent(name:properties:) async throws
+
+Track in-app events. Failed sends are queued offline (max 100 events) and retried automatically.
+
+```swift
+try await LinkForty.shared.trackEvent(
+    name: "add_to_cart",
+    properties: ["productId": "789", "price": 29.99]
+)
+```
+
+### trackRevenue(amount:currency:properties:) async throws
+
+Track revenue events. Amount must be non-negative.
+
+```swift
+try await LinkForty.shared.trackRevenue(
+    amount: Decimal(29.99),
+    currency: "USD",
+    properties: ["productId": "789", "orderId": "order_123"]
+)
+```
+
+### createLink(options:) async throws -> CreateLinkResult
+
+Create a shareable link. Requires `apiKey` in config.
+
+```swift
+let result = try await LinkForty.shared.createLink(
+    options: CreateLinkOptions(
+        deepLinkParameters: ["route": "product", "productId": "789"],
+        title: "Check out this product!",
+        utmParameters: UTMParameters(source: "in_app_share", medium: "referral")
+    )
+)
+
+print(result.url)       // https://go.yourdomain.com/tmpl/abc12345
+print(result.shortCode) // abc12345
+print(result.linkId)    // uuid
+```
+
+### Offline Event Queue
+
+```swift
+LinkForty.shared.queuedEventCount   // number of events waiting
+await LinkForty.shared.flushEvents() // manually flush
+LinkForty.shared.clearEventQueue()   // clear without sending
+```
+
+### Utility Methods
+
+```swift
+LinkForty.shared.getInstallId()    // String?
+LinkForty.shared.getInstallData()  // DeepLinkData?
+LinkForty.shared.isFirstLaunch()   // Bool
+LinkForty.shared.clearData()       // clear all stored data
+LinkForty.shared.reset()           // reset to uninitialized state
+```
+
+## Universal Links Setup
+
+1. In Xcode: target → Signing & Capabilities → + Capability → Associated Domains. Add:
+
+```
+applinks:go.yourdomain.com
+```
+
+2. Configure your Apple Team ID and App Bundle ID in the LinkForty dashboard (Settings → App Configuration).
+
+3. LinkForty automatically serves `/.well-known/apple-app-site-association` from your domain.
+
+## Complete SwiftUI Example
+
+```swift
+// MyApp.swift
+import SwiftUI
+import LinkFortySDK
+
+@main
+struct MyApp: App {
+    @StateObject private var deepLinkRouter = DeepLinkRouter()
+
+    init() {
+        Task {
+            do {
+                let config = LinkFortyConfig(
+                    baseURL: URL(string: "https://go.yourdomain.com")!,
+                    apiKey: "lf_live_abc123",
+                    debug: true
+                )
+                let response = try await LinkForty.shared.initialize(config: config)
+
+                if response.attributed {
+                    print("Install attributed with confidence: \(response.confidenceScore)")
+                }
+
+                LinkForty.shared.onDeferredDeepLink { data in
+                    if let data = data {
+                        DispatchQueue.main.async {
+                            deepLinkRouter.handleDeepLink(data)
+                        }
+                    }
+                }
+
+                LinkForty.shared.onDeepLink { url, data in
+                    if let data = data {
+                        DispatchQueue.main.async {
+                            deepLinkRouter.handleDeepLink(data)
+                        }
+                    }
+                }
+            } catch {
+                print("LinkForty init failed:", error)
+            }
+        }
+    }
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+                .environmentObject(deepLinkRouter)
+                .onOpenURL { url in
+                    LinkForty.shared.handleDeepLink(url: url)
+                }
+        }
+    }
+}
+
+// DeepLinkRouter.swift
+class DeepLinkRouter: ObservableObject {
+    @Published var route: String?
+    @Published var routeId: String?
+
+    func handleDeepLink(_ data: DeepLinkData) {
+        self.route = data.customParameters?["route"]
+        self.routeId = data.customParameters?["id"]
+    }
+}
+```
+
+## Complete UIKit Example
+
+```swift
+// AppDelegate.swift
+import UIKit
+import LinkFortySDK
+
+@main
+class AppDelegate: UIResponder, UIApplicationDelegate {
+    var window: UIWindow?
+
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+
+        Task {
+            let config = LinkFortyConfig(
+                baseURL: URL(string: "https://go.yourdomain.com")!,
+                apiKey: "lf_live_abc123"
+            )
+            let response = try await LinkForty.shared.initialize(config: config)
+
+            LinkForty.shared.onDeferredDeepLink { data in
+                if let data = data { self.routeToContent(data) }
+            }
+
+            LinkForty.shared.onDeepLink { url, data in
+                if let data = data { self.routeToContent(data) }
+            }
+        }
+
+        return true
+    }
+
+    func application(_ application: UIApplication,
+                     continue userActivity: NSUserActivity,
+                     restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+              let url = userActivity.webpageURL else { return false }
+        LinkForty.shared.handleDeepLink(url: url)
+        return true
+    }
+
+    private func routeToContent(_ data: DeepLinkData) {
+        guard let route = data.customParameters?["route"],
+              let id = data.customParameters?["id"] else { return }
+        DispatchQueue.main.async {
+            // Navigate to the appropriate view controller
+        }
+    }
+}
+```
+
+## Testing Deep Links
+
+```bash
+# iOS Simulator
+xcrun simctl openurl booted "https://go.yourdomain.com/abc123"
+```
+
+## Self-Hosted vs Cloud
+
+The only change is the `baseURL`:
+
+```swift
+// Cloud (managed SaaS)
+let config = LinkFortyConfig(baseURL: URL(string: "https://go.linkforty.com")!)
+
+// Self-hosted (@linkforty/core)
+let config = LinkFortyConfig(baseURL: URL(string: "https://links.yourdomain.com")!)
+```
+
+All SDK methods work identically with both.
