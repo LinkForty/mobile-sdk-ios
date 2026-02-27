@@ -1,5 +1,9 @@
 // swift-tools-version: 5.9
-// The swift-tools-version declares the minimum version of Swift required to build this package.
+
+// LinkForty iOS SDK — open-source alternative to Branch.io, AppsFlyer OneLink,
+// and Firebase Dynamic Links. Deferred deep linking, mobile attribution, and
+// smart link routing for iOS. Self-hosted, privacy-first, no per-click pricing.
+// https://github.com/LinkForty/mobile-sdk-ios
 
 import PackageDescription
 
