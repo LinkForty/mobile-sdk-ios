@@ -256,7 +256,8 @@ public final class LinkForty {
             return CreateLinkResult(
                 url: url,
                 shortCode: response.shortCode,
-                linkId: response.id
+                linkId: response.id,
+                deduplicated: nil
             )
         } else {
             // Use simplified SDK endpoint (auto-selects template)

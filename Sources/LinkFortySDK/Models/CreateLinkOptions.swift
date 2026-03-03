@@ -31,6 +31,9 @@ public struct CreateLinkOptions: Encodable {
     /// UTM parameters for campaign tracking
     public let utmParameters: UTMParameters?
 
+    /// Identifier for the app user creating the link (enables per-user deduplication and share attribution)
+    public let externalUserId: String?
+
     // MARK: - Initialization
 
     /// Creates link creation options
@@ -41,7 +44,8 @@ public struct CreateLinkOptions: Encodable {
         title: String? = nil,
         description: String? = nil,
         customCode: String? = nil,
-        utmParameters: UTMParameters? = nil
+        utmParameters: UTMParameters? = nil,
+        externalUserId: String? = nil
     ) {
         self.templateId = templateId
         self.templateSlug = templateSlug
@@ -50,6 +54,7 @@ public struct CreateLinkOptions: Encodable {
         self.description = description
         self.customCode = customCode
         self.utmParameters = utmParameters
+        self.externalUserId = externalUserId
     }
 }
 
@@ -63,6 +68,9 @@ public struct CreateLinkResult: Decodable {
 
     /// Link UUID
     public let linkId: String
+
+    /// True if an existing link was returned instead of creating a new one (per-user deduplication)
+    public let deduplicated: Bool?
 }
 
 /// Response from the dashboard link creation endpoint (POST /api/links)
