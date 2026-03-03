@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+## [1.2.0] - 2026-03-03
+### Added
+- Added `externalUserId` parameter to `CreateLinkOptions` for per-user deduplication and share attribution
+- Added `deduplicated` field to `CreateLinkResult` indicating when an existing link was returned
+
 ## [1.1.3] - 2026-02-16
 - Minimum deployment target bumped from iOS 13.0 to iOS 16.0
 - Minimum Xcode version bumped from 14.0 to 15.0
