@@ -24,6 +24,7 @@ public final class LinkForty {
     private var eventTracker: EventTracker?
     private var deepLinkHandler: DeepLinkHandler?
 
+    private var externalUserId: String?
     private let initQueue = DispatchQueue(label: "com.linkforty.sdk.init", qos: .userInitiated)
     private var isInitialized = false
 
@@ -148,6 +149,21 @@ public final class LinkForty {
         deepLinkHandler?.onDeepLink(callback)
     }
 
+    // MARK: - User Identity
+
+    /// Sets the external user ID for attribution. This ID will be attached to all
+    /// links created via `createLink()` unless overridden per-call. Pass `nil` to clear.
+    /// - Parameter id: External user ID string, or nil to clear
+    public func setExternalUserId(_ id: String?) {
+        self.externalUserId = id
+        LinkFortyLogger.log("External user ID set: \(id ?? "nil")")
+    }
+
+    /// Returns the current external user ID, if set
+    public func getExternalUserId() -> String? {
+        return externalUserId
+    }
+
     // MARK: - Event Tracking
 
     /// Tracks a custom event
@@ -240,16 +256,33 @@ public final class LinkForty {
             throw LinkFortyError.notInitialized
         }
 
-        if options.templateId != nil {
+        // Per-call externalUserId takes precedence, then fall back to SDK-level value
+        let resolvedOptions: CreateLinkOptions
+        if options.externalUserId == nil, let sdkUserId = externalUserId {
+            resolvedOptions = CreateLinkOptions(
+                templateId: options.templateId,
+                templateSlug: options.templateSlug,
+                deepLinkParameters: options.deepLinkParameters,
+                title: options.title,
+                description: options.description,
+                customCode: options.customCode,
+                utmParameters: options.utmParameters,
+                externalUserId: sdkUserId
+            )
+        } else {
+            resolvedOptions = options
+        }
+
+        if resolvedOptions.templateId != nil {
             // Use dashboard endpoint with explicit templateId
             let response: DashboardCreateLinkResponse = try await networkManager.request(
                 endpoint: "/api/links",
                 method: .post,
-                body: options
+                body: resolvedOptions
             )
 
             // Construct URL from parts
-            let templateSlug = options.templateSlug ?? ""
+            let templateSlug = resolvedOptions.templateSlug ?? ""
             let pathSegment = templateSlug.isEmpty ? response.shortCode : "\(templateSlug)/\(response.shortCode)"
             let url = config.baseURL.appendingPathComponent(pathSegment).absoluteString
 
@@ -264,7 +297,7 @@ public final class LinkForty {
             return try await networkManager.request(
                 endpoint: "/api/sdk/v1/links",
                 method: .post,
-                body: options
+                body: resolvedOptions
             )
         }
     }
@@ -305,6 +338,7 @@ public final class LinkForty {
         attributionManager?.clearData()
         eventTracker?.clearQueue()
         deepLinkHandler?.clearCallbacks()
+        externalUserId = nil
 
         LinkFortyLogger.log("All SDK data cleared")
     }
@@ -318,6 +352,7 @@ public final class LinkForty {
             attributionManager = nil
             eventTracker = nil
             deepLinkHandler = nil
+            externalUserId = nil
             isInitialized = false
 
             LinkFortyLogger.log("SDK reset to uninitialized state")
