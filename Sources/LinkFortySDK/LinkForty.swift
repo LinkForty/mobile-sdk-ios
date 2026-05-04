@@ -162,7 +162,7 @@ public final class LinkForty {
 
     /// Returns the current external user ID, if set
     public func getExternalUserId() -> String? {
-        return externalUserId
+        externalUserId
     }
 
     // MARK: - Event Tracking

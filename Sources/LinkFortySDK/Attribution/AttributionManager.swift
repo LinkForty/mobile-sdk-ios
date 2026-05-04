@@ -32,7 +32,8 @@ protocol StorageManagerProtocol {
 protocol FingerprintCollectorProtocol {
     func collectFingerprint(
         attributionWindowHours: Int,
-        deviceId: String?
+        deviceId: String?,
+        appToken: String?
     ) -> DeviceFingerprint
 }
 
