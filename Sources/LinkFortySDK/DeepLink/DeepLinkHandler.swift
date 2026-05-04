@@ -175,7 +175,8 @@ final class DeepLinkHandler {
         // Collect fingerprint for query parameters
         let fingerprint = fingerprintCollector.collectFingerprint(
             attributionWindowHours: 168,
-            deviceId: nil
+            deviceId: nil,
+            appToken: nil
         )
 
         // Build query string
