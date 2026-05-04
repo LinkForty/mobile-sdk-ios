@@ -52,7 +52,8 @@ func initialize(
 ```swift
 let config = LinkFortyConfig(
     baseURL: URL(string: "https://go.yourdomain.com")!,
-    apiKey: "your-api-key"
+    apiKey: "your-api-key",
+    appToken: "at_a1b2c3d4..."   // recommended for Cloud — enables organic-install attribution
 )
 let response = try await LinkForty.shared.initialize(config: config)
 print("Install ID: \(response.installId)")
@@ -407,6 +408,7 @@ Configuration for the LinkForty SDK.
 init(
     baseURL: URL,
     apiKey: String? = nil,
+    appToken: String? = nil,
     debug: Bool = false,
     attributionWindowHours: Int = 168
 )
@@ -415,6 +417,7 @@ init(
 **Parameters:**
 - `baseURL`: Backend URL (must be HTTPS except localhost)
 - `apiKey`: API key (optional for self-hosted)
+- `appToken`: Public workspace token (LinkForty Cloud only). Recommended — required for organic installs (App Store discovery, social mentions, etc.) to be attributed to your workspace. Find it in the dashboard under Workspace Settings → App Token. Format: `at_<32 hex chars>`. Safe to ship in your app bundle.
 - `debug`: Enable debug logging (default: false)
 - `attributionWindowHours`: Attribution window in hours (default: 168 = 7 days, max: 2160 = 90 days)
 
@@ -423,6 +426,7 @@ init(
 let config = LinkFortyConfig(
     baseURL: URL(string: "https://go.yourdomain.com")!,
     apiKey: "your-api-key",
+    appToken: "at_a1b2c3d4...",
     debug: true,
     attributionWindowHours: 24
 )
@@ -432,6 +436,7 @@ let config = LinkFortyConfig(
 
 - `baseURL: URL` - Backend URL
 - `apiKey: String?` - API key (optional)
+- `appToken: String?` - Public workspace token (optional, recommended for Cloud)
 - `debug: Bool` - Debug mode flag
 - `attributionWindowHours: Int` - Attribution window
 
