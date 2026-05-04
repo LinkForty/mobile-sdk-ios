@@ -69,7 +69,8 @@ func application(_ application: UIApplication, didFinishLaunchingWithOptions lau
         do {
             let config = LinkFortyConfig(
                 baseURL: URL(string: "https://go.yourdomain.com")!,
-                apiKey: "your-api-key", // Optional for self-hosted
+                apiKey: "your-api-key",         // Optional for self-hosted
+                appToken: "at_a1b2c3d4...",     // Recommended for Cloud — enables organic-install attribution
                 debug: true,
                 attributionWindowHours: 168 // 7 days
             )

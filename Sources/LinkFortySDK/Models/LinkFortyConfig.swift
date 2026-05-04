@@ -20,6 +20,15 @@ public struct LinkFortyConfig {
     /// - Note: Sent as Bearer token in Authorization header
     public let apiKey: String?
 
+    /// Public workspace token for LinkForty Cloud (optional)
+    /// - Note: Recommended for Cloud — required for organic installs
+    ///   (App Store discovery, social mentions, etc.) to be attributed
+    ///   to your workspace. Find it in the dashboard under Workspace
+    ///   Settings → App Token. Safe to ship in your app bundle —
+    ///   identifies the workspace only, can't authenticate API actions.
+    /// - Format: `at_<32 hex chars>`
+    public let appToken: String?
+
     /// Enable debug logging
     /// - Note: Logs network requests, responses, and SDK operations
     public let debug: Bool
@@ -35,18 +44,21 @@ public struct LinkFortyConfig {
     /// - Parameters:
     ///   - baseURL: The base URL of your LinkForty instance (e.g., https://go.yourdomain.com)
     ///   - apiKey: Optional API key for LinkForty Cloud authentication
+    ///   - appToken: Optional public workspace token (LinkForty Cloud only)
     ///   - debug: Enable debug logging (default: false)
     ///   - attributionWindowHours: Attribution window in hours (default: 168 = 7 days)
     ///
-    /// - Note: For self-hosted LinkForty Core, omit the apiKey parameter
+    /// - Note: For self-hosted LinkForty Core, omit the apiKey and appToken parameters
     public init(
         baseURL: URL,
         apiKey: String? = nil,
+        appToken: String? = nil,
         debug: Bool = false,
         attributionWindowHours: Int = 168
     ) {
         self.baseURL = baseURL
         self.apiKey = apiKey
+        self.appToken = appToken
         self.debug = debug
         self.attributionWindowHours = attributionWindowHours
     }
@@ -88,6 +100,7 @@ extension LinkFortyConfig: CustomStringConvertible {
         LinkFortyConfig(
             baseURL: \(baseURL.absoluteString),
             apiKey: \(apiKey != nil ? "***" : "nil"),
+            appToken: \(appToken != nil ? "***" : "nil"),
             debug: \(debug),
             attributionWindowHours: \(attributionWindowHours)
         )

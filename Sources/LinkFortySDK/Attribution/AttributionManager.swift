@@ -32,7 +32,8 @@ protocol StorageManagerProtocol {
 protocol FingerprintCollectorProtocol {
     func collectFingerprint(
         attributionWindowHours: Int,
-        deviceId: String?
+        deviceId: String?,
+        appToken: String?
     ) -> DeviceFingerprint
 }
 
@@ -78,16 +79,19 @@ final class AttributionManager {
     /// - Parameters:
     ///   - attributionWindowHours: Attribution window in hours
     ///   - deviceId: Optional device ID (IDFA/IDFV) if user consented
+    ///   - appToken: Optional public workspace token (Cloud organic-install scoping)
     /// - Returns: Install response with attribution data
     /// - Throws: LinkFortyError on failure
     func reportInstall(
         attributionWindowHours: Int,
-        deviceId: String? = nil
+        deviceId: String? = nil,
+        appToken: String? = nil
     ) async throws -> InstallResponse {
         // Collect device fingerprint
         let fingerprint = fingerprintCollector.collectFingerprint(
             attributionWindowHours: attributionWindowHours,
-            deviceId: deviceId
+            deviceId: deviceId,
+            appToken: appToken
         )
 
         LinkFortyLogger.log("Reporting install with fingerprint: \(fingerprint)")

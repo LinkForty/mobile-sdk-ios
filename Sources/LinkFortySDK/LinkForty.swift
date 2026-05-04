@@ -101,7 +101,8 @@ public final class LinkForty {
         // Report install and get attribution data (outside the serial queue)
         let response = try await attributionManager!.reportInstall(
             attributionWindowHours: attributionWindowHours,
-            deviceId: deviceId
+            deviceId: deviceId,
+            appToken: config.appToken
         )
 
         // If attributed, notify deferred deep link handler
@@ -161,7 +162,7 @@ public final class LinkForty {
 
     /// Returns the current external user ID, if set
     public func getExternalUserId() -> String? {
-        return externalUserId
+        externalUserId
     }
 
     // MARK: - Event Tracking

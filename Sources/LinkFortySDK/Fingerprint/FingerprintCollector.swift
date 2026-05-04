@@ -101,10 +101,12 @@ final class FingerprintCollector {
     /// - Parameters:
     ///   - attributionWindowHours: Attribution window in hours
     ///   - deviceId: Optional device ID (IDFA/IDFV) if user consented
+    ///   - appToken: Optional public workspace token for Cloud organic-install scoping
     /// - Returns: Device fingerprint
     func collectFingerprint(
         attributionWindowHours: Int,
-        deviceId: String? = nil
+        deviceId: String? = nil,
+        appToken: String? = nil
     ) -> DeviceFingerprint {
         DeviceFingerprint(
             userAgent: generateUserAgent(),
@@ -116,7 +118,8 @@ final class FingerprintCollector {
             platformVersion: device.systemVersion,
             appVersion: appVersion,
             deviceId: deviceId,
-            attributionWindowHours: attributionWindowHours
+            attributionWindowHours: attributionWindowHours,
+            appToken: appToken
         )
     }
 

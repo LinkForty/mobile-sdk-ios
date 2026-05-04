@@ -40,6 +40,12 @@ struct DeviceFingerprint: Codable {
     /// Attribution window in hours
     let attributionWindowHours: Int
 
+    /// Optional public workspace token (LinkForty Cloud only). Lets the
+    /// server scope organic installs to the right workspace. Encoded only
+    /// when present so legacy/self-hosted servers see the same payload
+    /// they always have.
+    let appToken: String?
+
     // MARK: - Codable
 
     enum CodingKeys: String, CodingKey {
@@ -53,6 +59,22 @@ struct DeviceFingerprint: Codable {
         case appVersion
         case deviceId
         case attributionWindowHours
+        case appToken
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(userAgent, forKey: .userAgent)
+        try container.encode(timezone, forKey: .timezone)
+        try container.encode(language, forKey: .language)
+        try container.encode(screenWidth, forKey: .screenWidth)
+        try container.encode(screenHeight, forKey: .screenHeight)
+        try container.encode(platform, forKey: .platform)
+        try container.encode(platformVersion, forKey: .platformVersion)
+        try container.encode(appVersion, forKey: .appVersion)
+        try container.encodeIfPresent(deviceId, forKey: .deviceId)
+        try container.encode(attributionWindowHours, forKey: .attributionWindowHours)
+        try container.encodeIfPresent(appToken, forKey: .appToken)
     }
 }
 

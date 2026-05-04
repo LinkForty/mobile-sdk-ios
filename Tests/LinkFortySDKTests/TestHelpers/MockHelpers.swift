@@ -93,14 +93,17 @@ class MockFingerprintCollector: FingerprintCollectorProtocol {
     var collectCalled = false
     var lastAttributionWindow: Int?
     var lastDeviceId: String?
+    var lastAppToken: String?
 
     func collectFingerprint(
         attributionWindowHours: Int,
-        deviceId: String? = nil
+        deviceId: String? = nil,
+        appToken: String? = nil
     ) -> DeviceFingerprint {
         collectCalled = true
         lastAttributionWindow = attributionWindowHours
         lastDeviceId = deviceId
+        lastAppToken = appToken
 
         return DeviceFingerprint(
             userAgent: "TestApp/1.0 iOS/15.0",
@@ -112,7 +115,8 @@ class MockFingerprintCollector: FingerprintCollectorProtocol {
             platformVersion: "15.0",
             appVersion: "1.0.0",
             deviceId: deviceId,
-            attributionWindowHours: attributionWindowHours
+            attributionWindowHours: attributionWindowHours,
+            appToken: appToken
         )
     }
 }
