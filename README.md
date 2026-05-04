@@ -372,4 +372,4 @@ LinkForty iOS SDK is available under the MIT license. See [LICENSE](LICENSE) for
 ## Related Projects
 
 - [LinkForty Core](https://github.com/LinkForty/core) — open-source self-hosted deep linking engine
-- [LinkForty Cloud](https://linkforty.com) — hosted SaaS with dashboard, teams, and billing
+- [LinkForty Cloud](https://linkforty.com) — hosted Core with additional features
