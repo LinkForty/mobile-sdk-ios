@@ -116,7 +116,9 @@ class MockFingerprintCollector: FingerprintCollectorProtocol {
             appVersion: "1.0.0",
             deviceId: deviceId,
             attributionWindowHours: attributionWindowHours,
-            appToken: appToken
+            appToken: appToken,
+            sdkName: SDKInfo.name,
+            sdkVersion: SDKInfo.version
         )
     }
 }

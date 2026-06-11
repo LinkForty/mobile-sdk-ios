@@ -10,6 +10,8 @@ A simple SwiftUI app demonstrating all features of the LinkForty iOS SDK.
 - ✅ Direct deep link handling (Universal Links)
 - ✅ Event tracking
 - ✅ Revenue tracking
+- ✅ Screen-view tracking (`trackScreenView` + the SwiftUI `.linkfortyScreen` modifier)
+- ✅ Last-click attribution (events automatically credited to the deep link that opened the app)
 - ✅ Event queue management
 - ✅ Programmatic link creation
 - ✅ Data management (clear/reset)
@@ -73,6 +75,7 @@ A simple SwiftUI app demonstrating all features of the LinkForty iOS SDK.
 Use the buttons in the app to:
 - Track button clicks
 - Track page views
+- Track a screen view (the root view also reports a `Home` screen view on appear via `.linkfortyScreen`)
 - Track revenue
 - Flush the event queue
 - Clear all data

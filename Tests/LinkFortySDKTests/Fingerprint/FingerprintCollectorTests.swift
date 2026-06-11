@@ -379,6 +379,24 @@ final class FingerprintCollectorTests: XCTestCase {
         XCTAssertEqual(decoded.appVersion, fingerprint.appVersion)
         XCTAssertEqual(decoded.deviceId, fingerprint.deviceId)
         XCTAssertEqual(decoded.attributionWindowHours, fingerprint.attributionWindowHours)
+        XCTAssertEqual(decoded.sdkName, fingerprint.sdkName)
+        XCTAssertEqual(decoded.sdkVersion, fingerprint.sdkVersion)
+    }
+
+    func testFingerprintIncludesSDKIdentity() throws {
+        // Arrange
+        let fingerprint = sut.collectFingerprint(attributionWindowHours: 168)
+
+        // Assert - the install payload carries this SDK's identity
+        XCTAssertEqual(fingerprint.sdkName, SDKInfo.name)
+        XCTAssertEqual(fingerprint.sdkVersion, SDKInfo.version)
+
+        // Assert - and the encoded JSON includes the keys for the backend
+        let json = try JSONSerialization.jsonObject(
+            with: try JSONEncoder().encode(fingerprint)
+        ) as? [String: Any]
+        XCTAssertEqual(json?["sdkName"] as? String, SDKInfo.name)
+        XCTAssertEqual(json?["sdkVersion"] as? String, SDKInfo.version)
     }
 }
 

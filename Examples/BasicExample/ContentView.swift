@@ -56,6 +56,9 @@ struct ContentView: View {
             }
             .navigationTitle("LinkForty Example")
         }
+        // Reports a `screen_view` (stamped with last-click attribution) when this
+        // screen appears. In a multi-screen app, add this to each screen.
+        .linkfortyScreen("Home")
     }
 }
 
@@ -156,6 +159,20 @@ struct EventsSection: View {
                 HStack {
                     Image(systemName: "eye")
                     Text("Track Page View")
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(8)
+            }
+
+            Button(action: {
+                appState.trackScreenView(name: "Checkout")
+            }) {
+                HStack {
+                    Image(systemName: "rectangle.on.rectangle")
+                    Text("Track Screen View (Checkout)")
                 }
                 .frame(maxWidth: .infinity)
                 .padding()

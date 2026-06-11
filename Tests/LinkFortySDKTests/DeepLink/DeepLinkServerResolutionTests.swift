@@ -43,7 +43,10 @@ final class DeepLinkServerResolutionTests: XCTestCase {
         sut.configure(
             networkManager: mockNetworkManager,
             fingerprintCollector: mockFingerprintCollector,
-            baseURL: URL(string: "https://go.example.com")!
+            baseURL: URL(string: "https://go.example.com")!,
+            attributionContext: AttributionContext(
+                defaults: UserDefaults(suiteName: "test-dl-\(UUID().uuidString)")!
+            )
         )
 
         let url = URL(string: "https://go.example.com/abc123")!
@@ -79,7 +82,10 @@ final class DeepLinkServerResolutionTests: XCTestCase {
         sut.configure(
             networkManager: mockNetworkManager,
             fingerprintCollector: mockFingerprintCollector,
-            baseURL: URL(string: "https://go.example.com")!
+            baseURL: URL(string: "https://go.example.com")!,
+            attributionContext: AttributionContext(
+                defaults: UserDefaults(suiteName: "test-dl-\(UUID().uuidString)")!
+            )
         )
 
         let url = URL(string: "https://go.example.com/tmpl/abc123")!
@@ -109,7 +115,10 @@ final class DeepLinkServerResolutionTests: XCTestCase {
         sut.configure(
             networkManager: mockNetworkManager,
             fingerprintCollector: mockFingerprintCollector,
-            baseURL: URL(string: "https://go.example.com")!
+            baseURL: URL(string: "https://go.example.com")!,
+            attributionContext: AttributionContext(
+                defaults: UserDefaults(suiteName: "test-dl-\(UUID().uuidString)")!
+            )
         )
 
         let url = URL(string: "https://go.example.com/fallback123?utm_source=test")!
@@ -164,7 +173,10 @@ final class DeepLinkServerResolutionTests: XCTestCase {
         sut.configure(
             networkManager: mockNetworkManager,
             fingerprintCollector: mockFingerprintCollector,
-            baseURL: URL(string: "https://go.example.com")!
+            baseURL: URL(string: "https://go.example.com")!,
+            attributionContext: AttributionContext(
+                defaults: UserDefaults(suiteName: "test-dl-\(UUID().uuidString)")!
+            )
         )
 
         let url = URL(string: "https://go.example.com/fp123")!
@@ -197,7 +209,10 @@ final class DeepLinkServerResolutionTests: XCTestCase {
         sut.configure(
             networkManager: mockNetworkManager,
             fingerprintCollector: mockFingerprintCollector,
-            baseURL: URL(string: "https://go.example.com")!
+            baseURL: URL(string: "https://go.example.com")!,
+            attributionContext: AttributionContext(
+                defaults: UserDefaults(suiteName: "test-dl-\(UUID().uuidString)")!
+            )
         )
 
         let url = URL(string: "https://go.example.com/")!

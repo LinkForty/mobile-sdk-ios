@@ -21,4 +21,7 @@ enum StorageKeys {
 
     /// First launch flag key
     static let firstLaunch = "\(prefix).firstLaunch"
+
+    /// Active last-click attribution context key (ActiveAttribution JSON)
+    static let attribution = "\(prefix).attribution"
 }

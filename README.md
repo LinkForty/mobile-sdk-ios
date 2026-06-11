@@ -13,6 +13,8 @@ Native iOS SDK for [LinkForty](https://github.com/LinkForty/core) — the open-s
 - **Universal Links**: Full support for iOS Universal Links (HTTPS deep links)
 - **Custom URL Schemes**: Handle custom app URL schemes
 - **Event Tracking**: Track in-app events and conversions
+- **Last-Click Attribution**: In-app events are automatically credited to the deep link that most recently opened the app
+- **Screen-Flow Tracking**: Report screen views to see what users do after clicking a link
 - **Offline Support**: Queue events when offline with automatic retry
 - **Privacy-First**: No IDFA collection, complies with Apple's privacy requirements
 - **Programmatic Link Creation**: Create short links directly from your app
@@ -170,7 +172,31 @@ try await LinkForty.shared.trackRevenue(
 )
 ```
 
-### 5. Create Links Programmatically
+Every event is automatically stamped with the deep link that most recently opened the app (last-click attribution), so the dashboard can show what users do *after* clicking a link. Events with no preceding deep-link open are reported as organic. No extra code is required.
+
+### 5. Track Screen Views
+
+Reporting screen views lets the dashboard build a per-link screen-flow funnel — which screens users reach after opening a deep link. Each `screen_view` carries the same last-click attribution stamp as other events.
+
+**SwiftUI** — add the `.linkfortyScreen(_:)` modifier to a screen:
+
+```swift
+ProductView()
+    .linkfortyScreen("ProductDetail")
+```
+
+**UIKit** — call from `viewDidAppear`:
+
+```swift
+override func viewDidAppear(_ animated: Bool) {
+    super.viewDidAppear(animated)
+    Task { try? await LinkForty.shared.trackScreenView(name: "ProductDetail") }
+}
+```
+
+> There is no navigation swizzling: you mark the screens you care about, which keeps screen names meaningful and predictable. The SDK records the previous screen automatically so transitions appear in the funnel.
+
+### 6. Create Links Programmatically
 
 ```swift
 let result = try await LinkForty.shared.createLink(

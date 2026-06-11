@@ -15,6 +15,9 @@ final class EventTrackerTests: XCTestCase {
     var mockNetworkManager: MockNetworkManager!
     var mockStorageManager: MockStorageManager!
     var mockEventQueue: MockEventQueue!
+    var attributionContext: AttributionContext!
+    var attributionDefaults: UserDefaults!
+    var attributionSuiteName: String!
 
     override func setUp() {
         super.setUp()
@@ -22,20 +25,30 @@ final class EventTrackerTests: XCTestCase {
         mockStorageManager = MockStorageManager()
         mockEventQueue = MockEventQueue()
 
+        // Isolated UserDefaults so attribution state never touches .standard.
+        attributionSuiteName = "test-attribution-\(UUID().uuidString)"
+        attributionDefaults = UserDefaults(suiteName: attributionSuiteName)
+        attributionContext = AttributionContext(defaults: attributionDefaults)
+
         mockStorageManager.mockInstallId = "test-install-id"
 
         sut = EventTracker(
             networkManager: mockNetworkManager,
             storageManager: mockStorageManager,
+            attributionContext: attributionContext,
             eventQueue: mockEventQueue
         )
     }
 
     override func tearDown() {
+        attributionDefaults.removePersistentDomain(forName: attributionSuiteName)
         sut = nil
         mockNetworkManager = nil
         mockStorageManager = nil
         mockEventQueue = nil
+        attributionContext = nil
+        attributionDefaults = nil
+        attributionSuiteName = nil
         super.tearDown()
     }
 
@@ -62,6 +75,79 @@ final class EventTrackerTests: XCTestCase {
 
         // Assert
         XCTAssertNotNil(mockNetworkManager.lastBody)
+    }
+
+    // MARK: - Last-click attribution stamp (SIT-237)
+
+    func testOrganicEventCarriesSessionButNoLink() async throws {
+        mockNetworkManager.mockResponse = EventResponse(success: true)
+
+        try await sut.trackEvent(name: "organic_event")
+
+        let event = try XCTUnwrap(mockNetworkManager.lastBody as? EventRequest)
+        XCTAssertNotNil(event.sessionId)
+        XCTAssertNil(event.attributedLinkId)
+    }
+
+    func testEventAfterDeepLinkOpenCarriesAttribution() async throws {
+        mockNetworkManager.mockResponse = EventResponse(success: true)
+
+        // A deep link opens the app, pinning attribution...
+        attributionContext.recordDeepLinkOpen(linkId: "link-A", clickId: "click-1")
+
+        // ...then the user does something.
+        try await sut.trackEvent(name: "purchase")
+
+        let event = try XCTUnwrap(mockNetworkManager.lastBody as? EventRequest)
+        XCTAssertEqual(event.attributedLinkId, "link-A")
+        XCTAssertEqual(event.attributedClickId, "click-1")
+        XCTAssertNotNil(event.linkOpenedAt)
+        XCTAssertEqual(event.sessionId, attributionContext.currentSessionId())
+    }
+
+    // MARK: - Screen Views (SIT-237)
+
+    func testTrackScreenViewEmitsScreenViewEvent() async throws {
+        mockNetworkManager.mockResponse = EventResponse(success: true)
+
+        try await sut.trackScreenView(name: "Home")
+
+        let event = try XCTUnwrap(mockNetworkManager.lastBody as? EventRequest)
+        XCTAssertEqual(event.eventName, "screen_view")
+        XCTAssertEqual(event.eventData["screen"]?.value as? String, "Home")
+    }
+
+    func testScreenViewIncludesPreviousScreen() async throws {
+        mockNetworkManager.mockResponse = EventResponse(success: true)
+
+        try await sut.trackScreenView(name: "Home")
+        try await sut.trackScreenView(name: "ProductDetail")
+
+        let event = try XCTUnwrap(mockNetworkManager.lastBody as? EventRequest)
+        XCTAssertEqual(event.eventData["screen"]?.value as? String, "ProductDetail")
+        XCTAssertEqual(event.eventData["previousScreen"]?.value as? String, "Home")
+    }
+
+    func testScreenViewCarriesAttributionStamp() async throws {
+        mockNetworkManager.mockResponse = EventResponse(success: true)
+        attributionContext.recordDeepLinkOpen(linkId: "link-A")
+
+        try await sut.trackScreenView(name: "Home")
+
+        let event = try XCTUnwrap(mockNetworkManager.lastBody as? EventRequest)
+        XCTAssertEqual(event.attributedLinkId, "link-A")
+        XCTAssertNotNil(event.sessionId)
+    }
+
+    func testEmptyScreenNameThrows() async {
+        mockNetworkManager.mockResponse = EventResponse(success: true)
+
+        do {
+            try await sut.trackScreenView(name: "")
+            XCTFail("Expected an error for empty screen name")
+        } catch {
+            // expected
+        }
     }
 
     func testTrackEventWithProperties() async throws {

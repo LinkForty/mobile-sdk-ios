@@ -35,6 +35,9 @@ final class DeepLinkHandler {
     /// Base URL for detecting LinkForty URLs
     private var baseURL: URL?
 
+    /// Last-click attribution context updated on each deep-link open
+    private var attributionContext: AttributionContext?
+
     /// Queue for thread-safe callback management
     private let queue = DispatchQueue(label: "com.linkforty.sdk.deeplink", qos: .userInitiated)
 
@@ -54,11 +57,13 @@ final class DeepLinkHandler {
     func configure(
         networkManager: NetworkManagerProtocol,
         fingerprintCollector: FingerprintCollectorProtocol,
-        baseURL: URL
+        baseURL: URL,
+        attributionContext: AttributionContext
     ) {
         self.networkManager = networkManager
         self.fingerprintCollector = fingerprintCollector
         self.baseURL = baseURL
+        self.attributionContext = attributionContext
     }
 
     // MARK: - Deferred Deep Link (Install Attribution)
@@ -91,6 +96,9 @@ final class DeepLinkHandler {
             // Cache the data
             self.cachedDeferredDeepLink = deepLinkData
             self.deferredDeepLinkDelivered = true
+
+            // Pin last-click attribution to this deferred (install) open.
+            self.attributionContext?.recordDeepLinkOpen(linkId: deepLinkData?.linkId)
 
             LinkFortyLogger.log("Delivering deferred deep link: \(deepLinkData?.shortCode ?? "organic")")
 
@@ -212,6 +220,9 @@ final class DeepLinkHandler {
     /// Delivers deep link data to all registered callbacks on the main thread
     private func deliverDeepLink(url: URL, data: DeepLinkData?) {
         if let data = data {
+            // Pin last-click attribution to this direct (re-engagement) open;
+            // supersedes any prior context. Organic/unresolved opens are a no-op.
+            attributionContext?.recordDeepLinkOpen(linkId: data.linkId)
             LinkFortyLogger.log("Parsed deep link: \(data)")
         } else {
             LinkFortyLogger.log("Failed to parse deep link URL")

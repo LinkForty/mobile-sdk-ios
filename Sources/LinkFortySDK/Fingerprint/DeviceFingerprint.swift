@@ -46,6 +46,12 @@ struct DeviceFingerprint: Codable {
     /// they always have.
     let appToken: String?
 
+    /// SDK platform identifier (e.g., "ios"), for backend SDK diagnostics
+    let sdkName: String
+
+    /// SDK release version (e.g., "1.4.0"), for backend SDK diagnostics
+    let sdkVersion: String
+
     // MARK: - Codable
 
     enum CodingKeys: String, CodingKey {
@@ -60,6 +66,8 @@ struct DeviceFingerprint: Codable {
         case deviceId
         case attributionWindowHours
         case appToken
+        case sdkName
+        case sdkVersion
     }
 
     func encode(to encoder: Encoder) throws {
@@ -75,6 +83,8 @@ struct DeviceFingerprint: Codable {
         try container.encodeIfPresent(deviceId, forKey: .deviceId)
         try container.encode(attributionWindowHours, forKey: .attributionWindowHours)
         try container.encodeIfPresent(appToken, forKey: .appToken)
+        try container.encode(sdkName, forKey: .sdkName)
+        try container.encode(sdkVersion, forKey: .sdkVersion)
     }
 }
 

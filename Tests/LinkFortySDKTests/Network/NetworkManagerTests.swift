@@ -336,6 +336,45 @@ final class NetworkManagerTests: XCTestCase {
         let contentType = mockSession.lastRequest?.value(forHTTPHeaderField: "Content-Type")
         XCTAssertEqual(contentType, "application/json")
     }
+
+    // MARK: - SDK Identity
+
+    func testRequestSetsSDKIdentityHeader() async throws {
+        // Arrange
+        struct TestResponse: Codable { let ok: Bool }
+        mockSession.mockData = try JSONEncoder().encode(TestResponse(ok: true))
+        mockSession.mockResponse = HTTPURLResponse(
+            url: URL(string: "https://api.example.com/test")!,
+            statusCode: 200, httpVersion: nil, headerFields: nil
+        )
+
+        // Act
+        let _: TestResponse = try await sut.request(endpoint: "/test", method: .post, body: ["k": "v"])
+
+        // Assert - every request identifies the SDK + version
+        let sdkHeader = mockSession.lastRequest?.value(forHTTPHeaderField: "X-LinkForty-SDK")
+        XCTAssertEqual(sdkHeader, "\(SDKInfo.name)/\(SDKInfo.version)")
+    }
+
+    func testEventRequestBodyCarriesSDKIdentity() async throws {
+        // Arrange
+        struct TestResponse: Codable { let ok: Bool }
+        mockSession.mockData = try JSONEncoder().encode(TestResponse(ok: true))
+        mockSession.mockResponse = HTTPURLResponse(
+            url: URL(string: "https://api.example.com/event")!,
+            statusCode: 200, httpVersion: nil, headerFields: nil
+        )
+        let event = EventRequest(installId: "install-1", eventName: "purchase", eventData: [:])
+
+        // Act
+        let _: TestResponse = try await sut.request(endpoint: "/event", method: .post, body: event)
+
+        // Assert - the event payload carries this SDK's identity for the backend
+        let body = mockSession.lastRequest?.httpBody ?? Data()
+        let json = try JSONSerialization.jsonObject(with: body) as? [String: Any]
+        XCTAssertEqual(json?["sdkName"] as? String, SDKInfo.name)
+        XCTAssertEqual(json?["sdkVersion"] as? String, SDKInfo.version)
+    }
 }
 
 // MARK: - Mock URLSession

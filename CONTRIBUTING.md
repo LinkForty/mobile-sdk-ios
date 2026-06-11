@@ -214,11 +214,11 @@ test: add integration tests for attribution
 
 ## Release Process
 
-1. Update version in `Package.swift`
-2. Update `CHANGELOG.md`
-3. Create git tag (`v1.0.0`)
-4. Push tag to trigger release workflow
-5. Update documentation
+1. **Bump `SDKInfo.version`** in `Sources/LinkFortySDK/SDKInfo.swift` to the new version. ⚠️ This is the version the SDK reports to the backend (`sdkVersion` field + `X-LinkForty-SDK` header). Swift Package Manager exposes no runtime version for the package, so this constant is hand-maintained — it **must** match the git tag below, or version diagnostics will be wrong.
+2. Update `CHANGELOG.md` (move `[Unreleased]` to the new version heading).
+3. Create git tag (`v1.4.0`) — must match `SDKInfo.version`.
+4. Push tag to trigger release workflow.
+5. Update documentation.
 
 ## License
 
