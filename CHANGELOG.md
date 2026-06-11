@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+### Added
+- The SDK now identifies itself on every request: a `sdkName` (`"ios"`) and `sdkVersion` field is included on the install and event payloads, and an `X-LinkForty-SDK: ios/<version>` header is sent on all requests. This lets the backend report which SDKs and versions are in use and flag outdated integrations. No API or integration changes are required.
+- **Last-click attribution for in-app events.** Every tracked event is now stamped with the deep link that most recently opened the app (deferred install *or* direct re-engagement) plus an app-open `sessionId`, so the backend can credit in-app activity to the originating link. The newest deep-link open supersedes the previous one, and the active link is persisted across app restarts; events with no preceding deep-link open stay organic (session only). Fully automatic — no API or integration changes are required.
+- **Screen-view tracking** for per-link screen-flow funnels. New `LinkForty.shared.trackScreenView(name:)` (UIKit, e.g. from `viewDidAppear`) and a SwiftUI `.linkfortyScreen("Name")` view modifier emit a `screen_view` event (carrying the screen name, the previous screen, and the active attribution stamp). Each call is one line; no navigation swizzling.
 
 ## [1.3.0] - 2026-05-04
 ### Added

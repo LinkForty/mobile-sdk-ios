@@ -12,6 +12,7 @@ Complete API reference for the LinkForty iOS SDK.
 - [InstallResponse](#installresponse) - Attribution response
 - [LinkFortyError](#linkfortyerror) - Error types
 - [Type Aliases](#type-aliases) - Callback types
+- [SwiftUI](#swiftui) - View modifiers
 
 ---
 
@@ -252,6 +253,36 @@ try await LinkForty.shared.trackRevenue(
     ]
 )
 ```
+
+---
+
+#### trackScreenView(name:properties:)
+
+Reports a screen view. Emits a `screen_view` event carrying the screen name and the previously tracked screen, stamped with the active last-click attribution context, so the dashboard can build a per-link screen-flow funnel.
+
+```swift
+func trackScreenView(
+    name: String,
+    properties: [String: Any]? = nil
+) async throws
+```
+
+**Parameters:**
+- `name`: Screen name (e.g., "ProductDetail"). Must not be empty.
+- `properties`: Optional additional properties
+
+**Throws:** `LinkFortyError` if tracking fails (including an empty screen name)
+
+**Example:**
+```swift
+// UIKit — from viewDidAppear
+override func viewDidAppear(_ animated: Bool) {
+    super.viewDidAppear(animated)
+    Task { try? await LinkForty.shared.trackScreenView(name: "ProductDetail") }
+}
+```
+
+For SwiftUI, prefer the [`.linkfortyScreen(_:)`](#viewlinkfortyscreen_properties) view modifier.
 
 ---
 
@@ -658,6 +689,35 @@ typealias DeepLinkCallback = (URL, DeepLinkData?) -> Void
 **Parameters:**
 - `URL`: The URL that opened the app
 - `DeepLinkData?`: Parsed deep link data, nil if parsing failed
+
+---
+
+## SwiftUI
+
+### View.linkfortyScreen(_:properties:)
+
+A `View` modifier that reports a `screen_view` event when the view appears. Equivalent to calling [`trackScreenView(name:properties:)`](#trackscreenviewnameproperties) from `onAppear`, including the active last-click attribution stamp.
+
+```swift
+func linkfortyScreen(
+    _ name: String,
+    properties: [String: Any]? = nil
+) -> some View
+```
+
+**Parameters:**
+- `name`: Screen name (e.g., "ProductDetail")
+- `properties`: Optional additional properties
+
+**Example:**
+```swift
+struct ProductView: View {
+    var body: some View {
+        VStack { /* ... */ }
+            .linkfortyScreen("ProductDetail")
+    }
+}
+```
 
 ---
 

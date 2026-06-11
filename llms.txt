@@ -200,6 +200,28 @@ try await LinkForty.shared.trackRevenue(
 )
 ```
 
+### Last-click attribution (automatic)
+
+Every event (including screen views) is automatically stamped with the deep link that most recently opened the app — deferred install or direct re-engagement — plus an app-open `sessionId`. The newest deep-link open supersedes the previous one, and the active link persists across app restarts. Events with no preceding deep-link open are organic (session only). No code is required; the backend uses the stamp to credit in-app activity to the originating link.
+
+### trackScreenView(name:properties:) async throws
+
+Report a screen view for per-link screen-flow funnels. Emits a `screen_view` event (with `screen`, the previous screen as `previousScreen`, and the attribution stamp). Throws on an empty name.
+
+```swift
+// UIKit — from viewDidAppear
+Task { try? await LinkForty.shared.trackScreenView(name: "ProductDetail") }
+```
+
+SwiftUI — use the `.linkfortyScreen(_:)` view modifier:
+
+```swift
+ProductView()
+    .linkfortyScreen("ProductDetail")
+```
+
+No navigation swizzling: mark the screens you care about, which keeps screen names meaningful.
+
 ### createLink(options:) async throws -> CreateLinkResult
 
 Create a shareable link. Requires `apiKey` in config.
@@ -299,6 +321,7 @@ struct MyApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(deepLinkRouter)
+                .linkfortyScreen("Home") // reports a screen_view (attribution-stamped) on appear
                 .onOpenURL { url in
                     LinkForty.shared.handleDeepLink(url: url)
                 }

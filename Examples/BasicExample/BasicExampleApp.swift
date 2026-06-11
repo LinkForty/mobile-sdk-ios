@@ -115,6 +115,23 @@ class AppState: ObservableObject {
         }
     }
 
+    func trackScreenView(name: String) {
+        Task { @MainActor in
+            do {
+                try await LinkForty.shared.trackScreenView(name: name)
+
+                eventCount += 1
+                queuedEvents = LinkForty.shared.queuedEventCount
+
+                print("✅ Screen view tracked: \(name)")
+
+            } catch {
+                errorMessage = error.localizedDescription
+                print("❌ Screen view tracking failed: \(error)")
+            }
+        }
+    }
+
     func trackRevenue(amount: Decimal, currency: String) {
         Task { @MainActor in
             do {

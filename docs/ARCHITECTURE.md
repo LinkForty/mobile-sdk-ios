@@ -193,7 +193,8 @@ public struct LinkFortyConfig {
 ### 6. Event Tracker
 
 **Responsibilities:**
-- Tracks custom in-app events
+- Tracks custom in-app events, revenue, and screen views
+- Stamps every event with the active last-click attribution context (see Attribution Context)
 - Queues events when offline
 - Retries failed events
 - Associates events with install ID
@@ -203,6 +204,20 @@ public struct LinkFortyConfig {
 - Automatic retry with exponential backoff
 - Event validation
 - Revenue tracking support
+- Screen-view tracking (`trackScreenView`, emits `screen_view` with `screen`/`previousScreen`)
+
+### 6a. Attribution Context
+
+**Responsibilities:**
+- Holds the active last-click attribution: the deep link that most recently opened the app (`linkId`, optional `clickId`, `openedAt`) plus a per-app-open `sessionId`
+- Updated on every deep-link open (deferred install or direct re-engagement) via `DeepLinkHandler`; the newest open supersedes the previous one
+- Supplies the stamp (`attributedLinkId`/`attributedClickId`/`linkOpenedAt`/`sessionId`) merged into every event by the Event Tracker
+
+**Behaviour:**
+- The active link is persisted (UserDefaults) so it survives app restarts; the conversion window is applied server-side at query time
+- `sessionId` is generated on cold start and rotated on each new deep-link open (in-memory)
+- Organic activity (no preceding deep-link open) carries only the session id
+- Cleared by `clearData()`
 
 ### 7. Network Manager
 
@@ -232,6 +247,7 @@ public struct LinkFortyConfig {
 com.linkforty.sdk.installId
 com.linkforty.sdk.installData
 com.linkforty.sdk.firstLaunch
+com.linkforty.sdk.attribution   // active last-click attribution (ActiveAttribution JSON)
 ```
 
 **Data Store:**
@@ -283,6 +299,14 @@ struct EventRequest: Codable {
     let eventName: String
     let eventData: [String: Any]
     let timestamp: String
+    // SDK identity (for backend diagnostics)
+    let sdkName: String
+    let sdkVersion: String
+    // Last-click attribution stamp (omitted when absent / organic)
+    let attributedLinkId: String?
+    let attributedClickId: String?
+    let linkOpenedAt: String?
+    let sessionId: String?
 }
 ```
 
