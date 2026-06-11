@@ -66,35 +66,8 @@ public final class LinkForty {
                 // Store configuration
                 self.config = config
 
-                // Create managers
-                let storageManager = StorageManager()
-                let networkManager = NetworkManager(config: config)
-                let fingerprintCollector = FingerprintCollector()
-                let attributionContext = AttributionContext(debug: config.debug)
-
-                self.networkManager = networkManager
-                self.attributionContext = attributionContext
-
-                self.attributionManager = AttributionManager(
-                    networkManager: networkManager,
-                    storageManager: storageManager,
-                    fingerprintCollector: fingerprintCollector
-                )
-
-                self.eventTracker = EventTracker(
-                    networkManager: networkManager,
-                    storageManager: storageManager,
-                    attributionContext: attributionContext
-                )
-
-                let handler = DeepLinkHandler()
-                handler.configure(
-                    networkManager: networkManager,
-                    fingerprintCollector: fingerprintCollector,
-                    baseURL: config.baseURL,
-                    attributionContext: attributionContext
-                )
-                self.deepLinkHandler = handler
+                // Create and wire the managers
+                self.setUpManagers(config: config)
 
                 // Mark as initialized
                 self.isInitialized = true
@@ -118,6 +91,39 @@ public final class LinkForty {
         LinkFortyLogger.log("SDK initialized successfully (attributed: \(response.attributed))")
 
         return response
+    }
+
+    /// Creates the SDK's managers and wires the shared attribution context into
+    /// the event tracker and deep-link handler. Must be called on `initQueue`.
+    private func setUpManagers(config: LinkFortyConfig) {
+        let storageManager = StorageManager()
+        let networkManager = NetworkManager(config: config)
+        let fingerprintCollector = FingerprintCollector()
+        let attributionContext = AttributionContext(debug: config.debug)
+
+        self.networkManager = networkManager
+        self.attributionContext = attributionContext
+
+        self.attributionManager = AttributionManager(
+            networkManager: networkManager,
+            storageManager: storageManager,
+            fingerprintCollector: fingerprintCollector
+        )
+
+        self.eventTracker = EventTracker(
+            networkManager: networkManager,
+            storageManager: storageManager,
+            attributionContext: attributionContext
+        )
+
+        let handler = DeepLinkHandler()
+        handler.configure(
+            networkManager: networkManager,
+            fingerprintCollector: fingerprintCollector,
+            baseURL: config.baseURL,
+            attributionContext: attributionContext
+        )
+        self.deepLinkHandler = handler
     }
 
     // MARK: - Deep Linking
