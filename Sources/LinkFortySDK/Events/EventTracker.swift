@@ -15,10 +15,15 @@ final class EventTracker {
 
     private let networkManager: NetworkManagerProtocol
     private let storageManager: StorageManagerProtocol
+    private let attributionContext: AttributionContext
     private let eventQueue: EventQueue
 
     /// Background queue for event processing
     private let processingQueue = DispatchQueue(label: "com.linkforty.sdk.events", qos: .utility)
+
+    /// Guards `lastScreenName` for the `previousScreen` transition stamp.
+    private let screenLock = NSLock()
+    private var lastScreenName: String?
 
     // MARK: - Initialization
 
@@ -26,14 +31,17 @@ final class EventTracker {
     /// - Parameters:
     ///   - networkManager: Network manager for API requests
     ///   - storageManager: Storage manager for install ID
+    ///   - attributionContext: Last-click attribution context stamped onto each event
     ///   - eventQueue: Event queue for offline support
     init(
         networkManager: NetworkManagerProtocol,
         storageManager: StorageManagerProtocol,
+        attributionContext: AttributionContext,
         eventQueue: EventQueue = EventQueue()
     ) {
         self.networkManager = networkManager
         self.storageManager = storageManager
+        self.attributionContext = attributionContext
         self.eventQueue = eventQueue
     }
 
@@ -55,12 +63,19 @@ final class EventTracker {
             throw LinkFortyError.notInitialized
         }
 
-        // Create event request
+        // Stamp the event with the active last-click attribution context so the
+        // backend can credit the deep link that drove it (organic events carry
+        // only the session id).
+        let stamp = attributionContext.getStamp()
         let event = EventRequest(
             installId: installId,
             eventName: name,
             eventData: properties ?? [:],
-            timestamp: Date()
+            timestamp: Date(),
+            attributedLinkId: stamp.attributedLinkId,
+            attributedClickId: stamp.attributedClickId,
+            linkOpenedAt: stamp.linkOpenedAt,
+            sessionId: stamp.sessionId
         )
 
         // Try to send immediately
@@ -98,6 +113,43 @@ final class EventTracker {
         eventProperties["currency"] = currency
 
         try await trackEvent(name: "revenue", properties: eventProperties)
+    }
+
+    /// Tracks a screen view.
+    ///
+    /// Emits a `screen_view` event (through the normal event pipeline, so it is
+    /// stamped with the active last-click attribution context) carrying the screen
+    /// name and — when available — the previously tracked screen, so the dashboard
+    /// can build a per-link screen-flow funnel.
+    ///
+    /// - Parameters:
+    ///   - name: Screen name (e.g., "ProductDetail")
+    ///   - properties: Optional additional properties
+    /// - Throws: LinkFortyError if tracking fails
+    func trackScreenView(name: String, properties: [String: Any]? = nil) async throws {
+        guard !name.isEmpty else {
+            throw LinkFortyError.invalidEventData("Screen name cannot be empty")
+        }
+
+        let previous = swapLastScreen(to: name)
+
+        var eventProperties = properties ?? [:]
+        eventProperties["screen"] = name
+        if let previous = previous, previous != name {
+            eventProperties["previousScreen"] = previous
+        }
+
+        try await trackEvent(name: "screen_view", properties: eventProperties)
+    }
+
+    /// Atomically records the current screen and returns the previous one.
+    /// Kept synchronous so the lock never spans an `await`.
+    private func swapLastScreen(to name: String) -> String? {
+        screenLock.lock()
+        defer { screenLock.unlock() }
+        let previous = lastScreenName
+        lastScreenName = name
+        return previous
     }
 
     // MARK: - Queue Management

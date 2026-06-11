@@ -22,13 +22,38 @@ struct EventRequest: Codable {
     /// ISO 8601 timestamp of when the event occurred
     let timestamp: String
 
+    /// SDK platform identifier (e.g., "ios"), for backend SDK diagnostics
+    let sdkName: String
+
+    /// SDK release version (e.g., "1.4.0"), for backend SDK diagnostics
+    let sdkVersion: String
+
+    // MARK: - Last-click attribution stamp (SIT-237)
+
+    /// The deep link currently credited for this event (last-click). Absent for
+    /// organic activity (no deep link has opened the app).
+    let attributedLinkId: String?
+
+    /// The originating click id, when known.
+    let attributedClickId: String?
+
+    /// ISO 8601 timestamp of when the attributing deep link opened the app.
+    let linkOpenedAt: String?
+
+    /// The app-open session this event belongs to (for screen-flow grouping).
+    let sessionId: String?
+
     // MARK: - Initialization
 
     init(
         installId: String,
         eventName: String,
         eventData: [String: Any],
-        timestamp: Date = Date()
+        timestamp: Date = Date(),
+        attributedLinkId: String? = nil,
+        attributedClickId: String? = nil,
+        linkOpenedAt: String? = nil,
+        sessionId: String? = nil
     ) {
         self.installId = installId
         self.eventName = eventName
@@ -36,6 +61,14 @@ struct EventRequest: Codable {
 
         let formatter = ISO8601DateFormatter()
         self.timestamp = formatter.string(from: timestamp)
+
+        self.sdkName = SDKInfo.name
+        self.sdkVersion = SDKInfo.version
+
+        self.attributedLinkId = attributedLinkId
+        self.attributedClickId = attributedClickId
+        self.linkOpenedAt = linkOpenedAt
+        self.sessionId = sessionId
     }
 
     // MARK: - Codable
@@ -45,6 +78,12 @@ struct EventRequest: Codable {
         case eventName
         case eventData
         case timestamp
+        case sdkName
+        case sdkVersion
+        case attributedLinkId
+        case attributedClickId
+        case linkOpenedAt
+        case sessionId
     }
 }
 

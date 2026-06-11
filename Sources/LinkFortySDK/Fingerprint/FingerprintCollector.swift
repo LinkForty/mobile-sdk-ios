@@ -119,7 +119,9 @@ final class FingerprintCollector {
             appVersion: appVersion,
             deviceId: deviceId,
             attributionWindowHours: attributionWindowHours,
-            appToken: appToken
+            appToken: appToken,
+            sdkName: SDKInfo.name,
+            sdkVersion: SDKInfo.version
         )
     }
 

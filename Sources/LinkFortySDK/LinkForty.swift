@@ -21,6 +21,7 @@ public final class LinkForty {
     private var config: LinkFortyConfig?
     private var networkManager: NetworkManager?
     private var attributionManager: AttributionManager?
+    private var attributionContext: AttributionContext?
     private var eventTracker: EventTracker?
     private var deepLinkHandler: DeepLinkHandler?
 
@@ -69,8 +70,10 @@ public final class LinkForty {
                 let storageManager = StorageManager()
                 let networkManager = NetworkManager(config: config)
                 let fingerprintCollector = FingerprintCollector()
+                let attributionContext = AttributionContext(debug: config.debug)
 
                 self.networkManager = networkManager
+                self.attributionContext = attributionContext
 
                 self.attributionManager = AttributionManager(
                     networkManager: networkManager,
@@ -80,14 +83,16 @@ public final class LinkForty {
 
                 self.eventTracker = EventTracker(
                     networkManager: networkManager,
-                    storageManager: storageManager
+                    storageManager: storageManager,
+                    attributionContext: attributionContext
                 )
 
                 let handler = DeepLinkHandler()
                 handler.configure(
                     networkManager: networkManager,
                     fingerprintCollector: fingerprintCollector,
-                    baseURL: config.baseURL
+                    baseURL: config.baseURL,
+                    attributionContext: attributionContext
                 )
                 self.deepLinkHandler = handler
 
@@ -200,6 +205,25 @@ public final class LinkForty {
             currency: currency,
             properties: properties
         )
+    }
+
+    /// Tracks a screen view.
+    ///
+    /// Emits a `screen_view` event stamped with the active last-click attribution
+    /// context, so the dashboard can show which screens users reach after opening a
+    /// deep link. Call from `viewDidAppear` (UIKit) or use the SwiftUI
+    /// `.linkfortyScreen("Name")` modifier.
+    ///
+    /// - Parameters:
+    ///   - name: Screen name (e.g., "ProductDetail")
+    ///   - properties: Optional additional properties
+    /// - Throws: LinkFortyError if tracking fails
+    public func trackScreenView(name: String, properties: [String: Any]? = nil) async throws {
+        guard isInitialized else {
+            throw LinkFortyError.notInitialized
+        }
+
+        try await eventTracker?.trackScreenView(name: name, properties: properties)
     }
 
     /// Flushes the event queue, attempting to send all queued events
@@ -337,6 +361,7 @@ public final class LinkForty {
     /// Clears all stored SDK data
     public func clearData() {
         attributionManager?.clearData()
+        attributionContext?.clear()
         eventTracker?.clearQueue()
         deepLinkHandler?.clearCallbacks()
         externalUserId = nil
@@ -351,6 +376,7 @@ public final class LinkForty {
             config = nil
             networkManager = nil
             attributionManager = nil
+            attributionContext = nil
             eventTracker = nil
             deepLinkHandler = nil
             externalUserId = nil

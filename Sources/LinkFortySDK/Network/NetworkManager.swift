@@ -113,6 +113,10 @@ final class NetworkManager {
         // Set headers
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
+        // Identify the SDK + version on every request (mirrors the sdkName/
+        // sdkVersion fields in the install/event payloads) for backend diagnostics.
+        request.setValue("\(SDKInfo.name)/\(SDKInfo.version)", forHTTPHeaderField: "X-LinkForty-SDK")
+
         // Add API key if present
         if let apiKey = config.apiKey {
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
