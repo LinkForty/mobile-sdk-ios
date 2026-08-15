@@ -34,6 +34,42 @@ public struct InstallResponse: Codable {
         case matchedFactors
         case deepLinkData
     }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        installId = try container.decode(String.self, forKey: .installId)
+        attributed = try container.decode(Bool.self, forKey: .attributed)
+        confidenceScore = try container.decode(Double.self, forKey: .confidenceScore)
+        matchedFactors = try container.decode([String].self, forKey: .matchedFactors)
+
+        // Organic (unattributed) installs come back as `deepLinkData: {}` rather
+        // than `null`, and an object without `shortCode` carries no link to route
+        // to. Treat any payload we can't decode as "no deep link" so a missing or
+        // unexpected field can never fail the whole install response — that would
+        // abort SDK initialization for every organic install.
+        do {
+            deepLinkData = try container.decodeIfPresent(DeepLinkData.self, forKey: .deepLinkData)
+        } catch {
+            deepLinkData = nil
+            LinkFortyLogger.log("Ignoring undecodable deepLinkData in install response: \(error)")
+        }
+    }
+
+    /// Creates an install response
+    public init(
+        installId: String,
+        attributed: Bool,
+        confidenceScore: Double,
+        matchedFactors: [String],
+        deepLinkData: DeepLinkData? = nil
+    ) {
+        self.installId = installId
+        self.attributed = attributed
+        self.confidenceScore = confidenceScore
+        self.matchedFactors = matchedFactors
+        self.deepLinkData = deepLinkData
+    }
 }
 
 // MARK: - CustomStringConvertible

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+### Fixed
+- `InstallResponse` no longer fails to decode when the backend returns `deepLinkData: {}` for an organic (unattributed) install, which surfaced as a decoding error from `initialize()`. An empty or otherwise unusable `deepLinkData` object is now treated as "no deep link" (`nil`), the same as `null` ([#2](https://github.com/LinkForty/mobile-sdk-ios/issues/2)).
+
 ## [1.4.0] - 2026-06-11
 ### Added
 - The SDK now identifies itself on every request: a `sdkName` (`"ios"`) and `sdkVersion` field is included on the install and event payloads, and an `X-LinkForty-SDK: ios/<version>` header is sent on all requests. This lets the backend report which SDKs and versions are in use and flag outdated integrations. No API or integration changes are required.
