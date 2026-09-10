@@ -269,4 +269,51 @@ final class DeepLinkDataTests: XCTestCase {
         let fmt = ISO8601DateFormatter()
         XCTAssertEqual(fmt.string(from: decoded.clickedAt!), fmt.string(from: original.clickedAt!))
     }
+
+    // MARK: - Merging URL parameters (direct open)
+
+    func testMergeAddsURLParametersWhenLinkConfiguresNone() {
+        let resolved = DeepLinkData(shortCode: "abc123")
+        let merged = resolved.mergingURLParameters(["slug": "titanic"])
+
+        XCTAssertEqual(merged.customParameters?["slug"], "titanic")
+    }
+
+    func testURLParameterOverridesConfiguredOne() {
+        // Same precedence the server applies on the deferred path: what the
+        // sharer put on the URL is more specific than the link's stored setup.
+        let resolved = DeepLinkData(
+            shortCode: "abc123",
+            customParameters: ["slug": "default", "keep": "me"]
+        )
+        let merged = resolved.mergingURLParameters(["slug": "titanic"])
+
+        XCTAssertEqual(merged.customParameters?["slug"], "titanic")
+        XCTAssertEqual(merged.customParameters?["keep"], "me")
+    }
+
+    func testMergeIsANoOpWhenURLCarriedNothing() {
+        let resolved = DeepLinkData(shortCode: "abc123", customParameters: ["a": "1"])
+
+        XCTAssertEqual(resolved.mergingURLParameters(nil), resolved)
+        XCTAssertEqual(resolved.mergingURLParameters([:]), resolved)
+    }
+
+    func testMergeNeverOverwritesServerOnlyFields() {
+        let resolved = DeepLinkData(
+            shortCode: "abc123",
+            iosURL: "https://apps.apple.com/app/id1",
+            utmParameters: UTMParameters(source: "ig"),
+            deepLinkPath: "/product/1",
+            appScheme: "myapp",
+            linkId: "link-1"
+        )
+        let merged = resolved.mergingURLParameters(["slug": "titanic"])
+
+        XCTAssertEqual(merged.linkId, "link-1")
+        XCTAssertEqual(merged.deepLinkPath, "/product/1")
+        XCTAssertEqual(merged.appScheme, "myapp")
+        XCTAssertEqual(merged.iosURL, "https://apps.apple.com/app/id1")
+        XCTAssertEqual(merged.utmParameters?.source, "ig")
+    }
 }
