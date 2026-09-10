@@ -215,10 +215,18 @@ test: add integration tests for attribution
 ## Release Process
 
 1. **Bump `SDKInfo.version`** in `Sources/LinkFortySDK/SDKInfo.swift` to the new version. ⚠️ This is the version the SDK reports to the backend (`sdkVersion` field + `X-LinkForty-SDK` header). Swift Package Manager exposes no runtime version for the package, so this constant is hand-maintained — it **must** match the git tag below, or version diagnostics will be wrong.
-2. Update `CHANGELOG.md` (move `[Unreleased]` to the new version heading).
-3. Create git tag (`v1.4.0`) — must match `SDKInfo.version`.
-4. Push tag to trigger release workflow.
+2. Update `CHANGELOG.md` (move `[Unreleased]` to the new version heading, e.g. `## [1.5.0] - 2026-08-15`).
+3. Create the git tag: `git tag v1.5.0`.
+4. Push the tag: `git push origin v1.5.0`.
 5. Update documentation.
+
+Pushing the tag runs `.github/workflows/release.yml`, which:
+
+- fails the release if `SDKInfo.version` doesn't match the tag, or if `CHANGELOG.md` has no heading for it — so a release can't ship reporting the wrong version;
+- builds and runs the test suite against the tagged commit;
+- publishes the GitHub Release using that version's CHANGELOG section as the release notes.
+
+Nothing is published by hand. The GitHub Release is how users learn a new version exists — it drives the README's latest-release badge, repo watch notifications, and Xcode's package update prompt — so a release that isn't published is a release users can't discover.
 
 ## License
 

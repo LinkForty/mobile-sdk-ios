@@ -2,6 +2,7 @@
 
 Native iOS SDK for [LinkForty](https://github.com/LinkForty/core) — the open-source alternative to Branch.io, AppsFlyer OneLink, and Firebase Dynamic Links. Add deferred deep linking, mobile attribution, and smart link routing to your iOS app. Self-hosted, privacy-first, no per-click pricing. 100% Swift with modern async/await APIs.
 
+[![Latest Release](https://img.shields.io/github/v/release/LinkForty/mobile-sdk-ios?label=latest)](https://github.com/LinkForty/mobile-sdk-ios/releases/latest)
 [![Swift Version](https://img.shields.io/badge/Swift-5.9+-orange.svg)](https://swift.org)
 [![iOS Version](https://img.shields.io/badge/iOS-16.0+-blue.svg)](https://www.apple.com/ios)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
