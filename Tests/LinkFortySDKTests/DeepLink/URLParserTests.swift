@@ -327,4 +327,29 @@ final class URLParserTests: XCTestCase {
         XCTAssertEqual(utm?.source, "")
         XCTAssertEqual(custom["productId"], "")
     }
+
+    // MARK: - Reserved parameter names
+
+    func testCustomParametersExcludeReservedNames() {
+        // utm_* is surfaced separately; fp_* are fingerprint signals the redirect
+        // reads server-side; lf_click is the id appended to a destination URL.
+        // None of them is the app's data, and the server excludes them too.
+        let url = URL(string: "https://go.example.com/abc123?slug=titanic&utm_source=ig&fp_tz=UTC&lf_click=abc")!
+        let custom = URLParser.extractCustomParameters(from: url)
+
+        XCTAssertEqual(custom, ["slug": "titanic"])
+    }
+
+    func testReservedNamesAreMatchedCaseInsensitively() {
+        let url = URL(string: "https://go.example.com/abc123?UTM_Source=ig&FP_TZ=UTC&LF_Click=x")!
+        XCTAssertTrue(URLParser.extractCustomParameters(from: url).isEmpty)
+    }
+
+    func testOrdinaryParametersSurvive() {
+        let url = URL(string: "https://go.example.com/abc123?slug=titanic&promo=new-year")!
+        let custom = URLParser.extractCustomParameters(from: url)
+
+        XCTAssertEqual(custom["slug"], "titanic")
+        XCTAssertEqual(custom["promo"], "new-year")
+    }
 }
