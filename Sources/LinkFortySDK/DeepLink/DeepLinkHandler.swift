@@ -210,7 +210,9 @@ final class DeepLinkHandler {
                 headers: nil
             )
             LinkFortyLogger.log("Server-side resolution succeeded for \(url.absoluteString)")
-            return resolved
+            // The resolve returns the link's stored configuration; the
+            // parameters on the URL that was tapped are known only here.
+            return resolved.mergingURLParameters(fallback?.customParameters)
         } catch {
             LinkFortyLogger.log("Server-side resolution failed, using local parse: \(error.localizedDescription)")
             return fallback

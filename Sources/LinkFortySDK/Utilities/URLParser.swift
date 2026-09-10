@@ -54,18 +54,30 @@ struct URLParser {
     /// Extracts custom (non-UTM) query parameters from URL
     /// - Parameter url: The URL to parse
     /// - Returns: Dictionary of custom parameters, empty if none found
+    /// Names LinkForty consumes; never a custom parameter. See the call site.
+    static func isReservedParameter(_ name: String) -> Bool {
+        let lower = name.lowercased()
+        return lower.hasPrefix("utm_") || lower.hasPrefix("fp_") || lower == "lf_click"
+    }
+
     static func extractCustomParameters(from url: URL) -> [String: String] {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let queryItems = components.queryItems else {
             return [:]
         }
 
-        let utmKeys = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"]
-
         var customParams: [String: String] = [:]
         for item in queryItems {
-            // Skip UTM parameters
-            guard !utmKeys.contains(item.name),
+            // Skip the names LinkForty consumes. Mirrors the server's own
+            // filter so a direct open and a deferred install agree on what
+            // reaches the app:
+            //   utm_*    surfaced separately as utmParameters
+            //   fp_*     fingerprint signals the SDK appends when resolving,
+            //            which the redirect reads server-side for attribution
+            //   lf_click the click id the redirect appends to a destination URL
+            // A tapped short link would not normally carry the last two, but the
+            // URL is public and anyone can append them.
+            guard !Self.isReservedParameter(item.name),
                   let value = item.value else {
                 continue
             }
