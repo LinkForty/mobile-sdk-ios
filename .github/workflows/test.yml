@@ -26,11 +26,12 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Select Xcode
-      run: sudo xcode-select -s /Applications/Xcode_16.0.app
-
-    - name: Show Xcode version
-      run: xcodebuild -version
+    - name: Show Xcode and simulators
+      run: |
+        ls -d /Applications/Xcode*.app
+        xcodebuild -version
+        xcrun simctl list runtimes
+        xcrun simctl list devices available | grep -E "iPhone (14|15|16)" | head -20
 
     - name: Run tests
       run: |
@@ -70,8 +71,12 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Select Xcode
-      run: sudo xcode-select -s /Applications/Xcode_16.0.app
+    - name: Show Xcode and simulators
+      run: |
+        ls -d /Applications/Xcode*.app
+        xcodebuild -version
+        xcrun simctl list runtimes
+        xcrun simctl list devices available | grep -E "iPhone (14|15|16)" | head -20
 
     - name: Run tests
       run: |
@@ -81,9 +86,7 @@ jobs:
           -destination "platform=iOS Simulator,name=iPhone 16,OS=18.0" \
           -testLanguage ${{ matrix.language }} \
           -testRegion ${{ matrix.region }} \
-          | tee xcodebuild.log \
           | xcpretty
-        grep -h "Locale.current" xcodebuild.log || true
 
   lint:
     name: SwiftLint

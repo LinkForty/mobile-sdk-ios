@@ -94,7 +94,6 @@ final class InstallLocaleTests: XCTestCase {
             appToken: nil
         )
 
-        print("Locale.current \(identifier) → language \(fingerprint.language)")
         assertLanguageTag(fingerprint.language, context: identifier)
     }
 
