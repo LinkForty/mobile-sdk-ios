@@ -8,8 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+## [1.4.2] - 2026-10-19
 ### Fixed
-- The device language is sent as `language` or `language-REGION` (`en-GB`, `zh-CN`, `es-419`) on the install request and the `fp_lang` resolve parameter. `Locale.identifier` keywords for region, calendar and number settings (`en_GB@rg=eszzzz`, `en_US@calendar=japanese`) and script subtags (`zh-Hans_CN`) are no longer included, so the value matches what a browser on the same device sends in `Accept-Language`.
+- The device language is sent as `language` or `language-REGION` (`en-GB`, `zh-CN`, `es-419`) on the install request and the `fp_lang` resolve parameter. `Locale.identifier` keywords for region, calendar and number settings (`en_GB@rg=eszzzz`, `en_US@calendar=japanese`) and script subtags (`zh-Hans_CN`) are no longer included, so the value matches what a browser on the same device sends in `Accept-Language` ([#7](https://github.com/LinkForty/mobile-sdk-ios/pull/7)).
 
 ## [1.4.1] - 2026-09-09
 ### Fixed
