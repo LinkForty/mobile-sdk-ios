@@ -154,7 +154,9 @@ final class StorageManagerTests: XCTestCase {
     func testFirstLaunchFlagPersists() {
         // Act
         sut.setHasLaunched()
-        Thread.sleep(forTimeInterval: 0.1)
+        // A read on the same manager runs after the write on its serial queue,
+        // so the flag is stored before a second manager reads it.
+        XCTAssertFalse(sut.isFirstLaunch())
 
         // Create new storage manager with same UserDefaults
         let newSut = StorageManager(userDefaults: mockUserDefaults)

@@ -111,7 +111,7 @@ final class FingerprintCollector {
         DeviceFingerprint(
             userAgent: generateUserAgent(),
             timezone: timeZone.identifier,
-            language: locale.identifier,
+            language: Self.languageTag(for: locale),
             screenWidth: Int(nativeScreenWidth),
             screenHeight: Int(nativeScreenHeight),
             platform: "iOS",
@@ -123,6 +123,39 @@ final class FingerprintCollector {
             sdkName: SDKInfo.name,
             sdkVersion: SDKInfo.version
         )
+    }
+
+    // MARK: - Language
+
+    /// The device language as `language` or `language-REGION` (`en-GB`, `zh-CN`, `es-419`).
+    ///
+    /// `Locale.identifier` can carry a script (`zh-Hans_CN`) and keywords for the
+    /// user's region, calendar or number settings (`en_GB@rg=eszzzz`,
+    /// `en_US@calendar=japanese`). Only the language and its region are sent, which
+    /// is the same shape a browser on the device sends in `Accept-Language`. The
+    /// region is the one in the language (`en_GB@rg=eszzzz` → `en-GB`), not the
+    /// `rg` override. An identifier with no recognizable language is sent as is.
+    static func languageTag(for locale: Locale) -> String {
+        let identifier = locale.identifier
+        let base = identifier.split(separator: "@", maxSplits: 1, omittingEmptySubsequences: false)[0]
+        let subtags = base.split(whereSeparator: { $0 == "-" || $0 == "_" }).map(String.init)
+
+        guard let language = subtags.first,
+              (2...3).contains(language.count),
+              language.allSatisfy({ $0.isASCII && $0.isLetter }) else {
+            return identifier
+        }
+
+        for subtag in subtags.dropFirst() {
+            // A single-character subtag starts an extension or private-use section.
+            if subtag.count <= 1 { break }
+            let isLetterRegion = subtag.count == 2 && subtag.allSatisfy { $0.isASCII && $0.isLetter }
+            let isNumericRegion = subtag.count == 3 && subtag.allSatisfy { $0.isASCII && $0.isNumber }
+            if isLetterRegion || isNumericRegion {
+                return "\(language.lowercased())-\(subtag.uppercased())"
+            }
+        }
+        return language.lowercased()
     }
 
     // MARK: - Private Helpers

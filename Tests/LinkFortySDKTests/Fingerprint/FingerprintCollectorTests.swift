@@ -218,6 +218,33 @@ final class FingerprintCollectorTests: XCTestCase {
         }
     }
 
+    func testLanguageIsLanguageAndRegionOnly() {
+        let cases = [
+            ("en_GB@rg=eszzzz", "en-GB"),
+            ("en_US@calendar=japanese", "en-US"),
+            ("en_US@numbers=arab", "en-US"),
+            ("zh-Hans_CN", "zh-CN"),
+            ("zh_Hans_CN", "zh-CN"),
+            ("es_419", "es-419"),
+            ("en", "en"),
+            ("fil_PH", "fil-PH")
+        ]
+
+        for (identifier, expected) in cases {
+            let collector = FingerprintCollector(
+                device: mockDevice,
+                screen: mockScreen,
+                bundle: mockBundle,
+                locale: Locale(identifier: identifier),
+                timeZone: mockTimeZone
+            )
+
+            let fingerprint = collector.collectFingerprint(attributionWindowHours: 168)
+
+            XCTAssertEqual(fingerprint.language, expected, "for \(identifier)")
+        }
+    }
+
     // MARK: - Screen Resolution Tests
 
     func testScreenResolution() {
