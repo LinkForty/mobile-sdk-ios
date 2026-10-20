@@ -52,9 +52,17 @@ final class LaunchFlowTests: XCTestCase {
         super.tearDown()
     }
 
+    /// Ends the current launch. `StorageManager` writes on its own serial queue,
+    /// and the next launch reads through a new manager; a read on the current
+    /// manager drains its queue first, so the next launch sees what this one stored.
+    private func endLaunch() {
+        _ = LinkForty.shared.getInstallId()
+        LinkForty.shared.reset()
+    }
+
     /// Initializes the SDK and returns the deferred deep links delivered on this launch.
     private func launch() async throws -> (response: InstallResponse, deferred: [DeepLinkData?]) {
-        LinkForty.shared.reset()
+        endLaunch()
         let response = try await LinkForty.shared.initialize(config: config)
 
         var deferred: [DeepLinkData?] = []
@@ -117,7 +125,7 @@ final class LaunchFlowTests: XCTestCase {
     func testIsFirstLaunchIsFalseBeforeInitializeOnLaterLaunch() async throws {
         _ = try await launch()
 
-        LinkForty.shared.reset()
+        endLaunch()
         XCTAssertFalse(LinkForty.shared.isFirstLaunch())
 
         _ = try await LinkForty.shared.initialize(config: config)
