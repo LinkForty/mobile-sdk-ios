@@ -144,6 +144,14 @@ final class DeepLinkHandler {
         }
     }
 
+    /// Forgets the delivered deferred deep link, keeping registered callbacks.
+    func clearDeferredDeepLink() {
+        queue.async { [weak self] in
+            self?.deferredDeepLinkDelivered = false
+            self?.cachedDeferredDeepLink = nil
+        }
+    }
+
     // MARK: - Testing Helpers
 
     /// Clears all registered callbacks (for testing)

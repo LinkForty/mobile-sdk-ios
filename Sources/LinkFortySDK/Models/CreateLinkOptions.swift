@@ -78,9 +78,11 @@ public struct CreateLinkResult: Decodable {
 struct DashboardCreateLinkResponse: Decodable {
     let id: String
     let shortCode: String
+    let shortUrl: String?
 
     enum CodingKeys: String, CodingKey {
         case id
         case shortCode = "short_code"
+        case shortUrl = "short_url"
     }
 }

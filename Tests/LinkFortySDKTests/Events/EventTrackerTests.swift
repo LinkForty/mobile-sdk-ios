@@ -56,7 +56,7 @@ final class EventTrackerTests: XCTestCase {
 
     func testTrackEventSuccess() async throws {
         // Arrange
-        mockNetworkManager.mockResponse = EventResponse(success: true)
+        mockNetworkManager.mockResponse = EventResponse(eventId: "evt-1", acknowledged: true)
 
         // Act
         try await sut.trackEvent(name: "test_event", properties: ["key": "value"])
@@ -68,7 +68,7 @@ final class EventTrackerTests: XCTestCase {
 
     func testTrackEventWithoutProperties() async throws {
         // Arrange
-        mockNetworkManager.mockResponse = EventResponse(success: true)
+        mockNetworkManager.mockResponse = EventResponse(eventId: "evt-1", acknowledged: true)
 
         // Act
         try await sut.trackEvent(name: "simple_event")
@@ -80,7 +80,7 @@ final class EventTrackerTests: XCTestCase {
     // MARK: - Last-click attribution stamp (SIT-237)
 
     func testOrganicEventCarriesSessionButNoLink() async throws {
-        mockNetworkManager.mockResponse = EventResponse(success: true)
+        mockNetworkManager.mockResponse = EventResponse(eventId: "evt-1", acknowledged: true)
 
         try await sut.trackEvent(name: "organic_event")
 
@@ -90,7 +90,7 @@ final class EventTrackerTests: XCTestCase {
     }
 
     func testEventAfterDeepLinkOpenCarriesAttribution() async throws {
-        mockNetworkManager.mockResponse = EventResponse(success: true)
+        mockNetworkManager.mockResponse = EventResponse(eventId: "evt-1", acknowledged: true)
 
         // A deep link opens the app, pinning attribution...
         attributionContext.recordDeepLinkOpen(linkId: "link-A", clickId: "click-1")
@@ -108,7 +108,7 @@ final class EventTrackerTests: XCTestCase {
     // MARK: - Screen Views (SIT-237)
 
     func testTrackScreenViewEmitsScreenViewEvent() async throws {
-        mockNetworkManager.mockResponse = EventResponse(success: true)
+        mockNetworkManager.mockResponse = EventResponse(eventId: "evt-1", acknowledged: true)
 
         try await sut.trackScreenView(name: "Home")
 
@@ -118,7 +118,7 @@ final class EventTrackerTests: XCTestCase {
     }
 
     func testScreenViewIncludesPreviousScreen() async throws {
-        mockNetworkManager.mockResponse = EventResponse(success: true)
+        mockNetworkManager.mockResponse = EventResponse(eventId: "evt-1", acknowledged: true)
 
         try await sut.trackScreenView(name: "Home")
         try await sut.trackScreenView(name: "ProductDetail")
@@ -129,7 +129,7 @@ final class EventTrackerTests: XCTestCase {
     }
 
     func testScreenViewCarriesAttributionStamp() async throws {
-        mockNetworkManager.mockResponse = EventResponse(success: true)
+        mockNetworkManager.mockResponse = EventResponse(eventId: "evt-1", acknowledged: true)
         attributionContext.recordDeepLinkOpen(linkId: "link-A")
 
         try await sut.trackScreenView(name: "Home")
@@ -140,7 +140,7 @@ final class EventTrackerTests: XCTestCase {
     }
 
     func testEmptyScreenNameThrows() async {
-        mockNetworkManager.mockResponse = EventResponse(success: true)
+        mockNetworkManager.mockResponse = EventResponse(eventId: "evt-1", acknowledged: true)
 
         do {
             try await sut.trackScreenView(name: "")
@@ -152,7 +152,7 @@ final class EventTrackerTests: XCTestCase {
 
     func testTrackEventWithProperties() async throws {
         // Arrange
-        mockNetworkManager.mockResponse = EventResponse(success: true)
+        mockNetworkManager.mockResponse = EventResponse(eventId: "evt-1", acknowledged: true)
         let properties = [
             "product_id": "123",
             "category": "electronics",
@@ -205,7 +205,7 @@ final class EventTrackerTests: XCTestCase {
 
     func testTrackRevenue() async throws {
         // Arrange
-        mockNetworkManager.mockResponse = EventResponse(success: true)
+        mockNetworkManager.mockResponse = EventResponse(eventId: "evt-1", acknowledged: true)
 
         // Act
         try await sut.trackRevenue(amount: 29.99, currency: "USD")
@@ -216,7 +216,7 @@ final class EventTrackerTests: XCTestCase {
 
     func testTrackRevenueWithProperties() async throws {
         // Arrange
-        mockNetworkManager.mockResponse = EventResponse(success: true)
+        mockNetworkManager.mockResponse = EventResponse(eventId: "evt-1", acknowledged: true)
 
         // Act
         try await sut.trackRevenue(
@@ -247,7 +247,7 @@ final class EventTrackerTests: XCTestCase {
 
     func testTrackRevenueAcceptsZero() async throws {
         // Arrange
-        mockNetworkManager.mockResponse = EventResponse(success: true)
+        mockNetworkManager.mockResponse = EventResponse(eventId: "evt-1", acknowledged: true)
 
         // Act & Assert - Should not throw
         try await sut.trackRevenue(amount: 0, currency: "USD")

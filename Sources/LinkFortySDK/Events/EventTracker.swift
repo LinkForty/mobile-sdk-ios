@@ -18,9 +18,6 @@ final class EventTracker {
     private let attributionContext: AttributionContext
     private let eventQueue: EventQueue
 
-    /// Background queue for event processing
-    private let processingQueue = DispatchQueue(label: "com.linkforty.sdk.events", qos: .utility)
-
     /// Guards `lastScreenName` for the `previousScreen` transition stamp.
     private let screenLock = NSLock()
     private var lastScreenName: String?
@@ -86,9 +83,11 @@ final class EventTracker {
             // If send succeeds, try to flush queue
             await flushQueue()
         } catch {
-            // If send fails, queue the event
-            eventQueue.enqueue(event)
-            LinkFortyLogger.log("Event queued due to error: \(error)")
+            // Queue it if a later attempt could succeed; a rejected event is not retried.
+            if Self.isRetryable(error) {
+                eventQueue.enqueue(event)
+                LinkFortyLogger.log("Event queued due to error: \(error)")
+            }
             throw error
         }
     }
@@ -154,28 +153,39 @@ final class EventTracker {
 
     // MARK: - Queue Management
 
-    /// Flushes the event queue, attempting to send all queued events
+    /// Sends queued events in order and returns when they are sent. Stops at the
+    /// first event that fails with an error worth retrying and keeps it and the
+    /// rest queued; drops an event the server rejects.
     func flushQueue() async {
-        await processingQueue.sync { [weak self] in
-            guard let self = self else { return }
+        let pending = eventQueue.drain()
+        guard !pending.isEmpty else { return }
 
-            LinkFortyLogger.log("Flushing event queue (\(self.eventQueue.count) events)")
+        LinkFortyLogger.log("Flushing event queue (\(pending.count) events)")
 
-            while !self.eventQueue.isEmpty {
-                guard let event = self.eventQueue.dequeue() else { break }
-
-                Task {
-                    do {
-                        try await self.sendEvent(event)
-                        LinkFortyLogger.log("Queued event sent: \(event.eventName)")
-                    } catch {
-                        // Re-queue if send fails
-                        self.eventQueue.enqueue(event)
-                        LinkFortyLogger.log("Failed to send queued event: \(error)")
-                        return
-                    }
-                }
+        for (index, event) in pending.enumerated() {
+            do {
+                try await sendEvent(event)
+                LinkFortyLogger.log("Queued event sent: \(event.eventName)")
+            } catch where Self.isRetryable(error) {
+                eventQueue.requeue(Array(pending[index...]))
+                LinkFortyLogger.log("Failed to send queued event, keeping it queued: \(error)")
+                return
+            } catch {
+                LinkFortyLogger.log("Dropping queued event the server rejected: \(error)")
             }
+        }
+    }
+
+    /// Network failures and server errors (5xx) can succeed later; anything else
+    /// (a 4xx, an event that can't be encoded) will fail the same way again.
+    static func isRetryable(_ error: Error) -> Bool {
+        switch error {
+        case LinkFortyError.networkError:
+            return true
+        case LinkFortyError.invalidResponse(let statusCode, _):
+            return statusCode.map { $0 >= 500 } ?? true
+        default:
+            return false
         }
     }
 

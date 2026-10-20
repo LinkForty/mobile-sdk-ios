@@ -122,6 +122,103 @@ final class LaunchFlowTests: XCTestCase {
         XCTAssertTrue(LinkForty.shared.isFirstLaunch())
     }
 
+    func testOrganicInstallDeliversNilOnce() async throws {
+        session.mockData = try JSONEncoder().encode(
+            InstallResponse(installId: "install-1", attributed: false, confidenceScore: 0, matchedFactors: [])
+        )
+
+        let first = try await launch()
+        let second = try await launch()
+
+        XCTAssertEqual(first.deferred.count, 1)
+        XCTAssertNil(first.deferred.first ?? DeepLinkData(shortCode: "not delivered"))
+        XCTAssertTrue(second.deferred.isEmpty)
+    }
+
+    func testCallbacksRegisteredBeforeInitializeReceiveTheDeferredDeepLink() async throws {
+        endLaunch()
+        var deferred: [DeepLinkData?] = []
+        LinkForty.shared.onDeferredDeepLink { deferred.append($0) }
+
+        _ = try await LinkForty.shared.initialize(config: config)
+        try await Task.sleep(nanoseconds: 500_000_000)
+        await MainActor.run {}
+
+        XCTAssertEqual(deferred.count, 1)
+        XCTAssertEqual(deferred.first??.shortCode, "welcome")
+    }
+
+    func testLinkHandledBeforeInitializeIsDeliveredOnceInitialized() async throws {
+        endLaunch()
+        var opened: [URL] = []
+        LinkForty.shared.onDeepLink { url, _ in opened.append(url) }
+        let link = URL(string: "https://go.example.com/abc123")!
+
+        LinkForty.shared.handleDeepLink(url: link)
+        XCTAssertTrue(opened.isEmpty)
+        _ = try await LinkForty.shared.initialize(config: config)
+        try await Task.sleep(nanoseconds: 500_000_000)
+        await MainActor.run {}
+
+        XCTAssertEqual(opened, [link])
+    }
+
+    func testFailedInitializeCanBeRetriedInTheSameLaunch() async throws {
+        endLaunch()
+        session.queuedErrors = [URLError(.cannotParseResponse)]
+        do {
+            _ = try await LinkForty.shared.initialize(config: config)
+            XCTFail("Expected initialize to throw")
+        } catch {}
+
+        let response = try await LinkForty.shared.initialize(config: config)
+
+        XCTAssertEqual(response.installId, "install-1")
+        XCTAssertEqual(LinkForty.shared.getInstallId(), "install-1")
+    }
+
+    func testConfiguredAttributionWindowIsSent() async throws {
+        endLaunch()
+
+        _ = try await LinkForty.shared.initialize(
+            config: LinkFortyConfig(baseURL: URL(string: "https://api.example.com")!, attributionWindowHours: 24)
+        )
+
+        let body = try XCTUnwrap(session.lastRequest?.httpBody)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertEqual(json["attributionWindowHours"] as? Int, 24)
+    }
+
+    func testClearDataKeepsDeepLinkCallbacks() async throws {
+        _ = try await launch()
+        var opened: [URL] = []
+        LinkForty.shared.onDeepLink { url, _ in opened.append(url) }
+        let link = URL(string: "https://go.example.com/abc123")!
+
+        LinkForty.shared.clearData()
+        LinkForty.shared.handleDeepLink(url: link)
+        try await Task.sleep(nanoseconds: 500_000_000)
+        await MainActor.run {}
+
+        XCTAssertEqual(opened, [link])
+    }
+
+    func testCreateLinkWithTemplateReturnsTheServersShortURL() async throws {
+        endLaunch()
+        session.dataByPath["/api/links"] = Data(
+            #"{"id":"link-1","short_code":"abc","short_url":"https://links.example.com/promo/abc"}"#.utf8
+        )
+        _ = try await LinkForty.shared.initialize(
+            config: LinkFortyConfig(baseURL: URL(string: "https://api.example.com")!, apiKey: "key")
+        )
+
+        let result = try await LinkForty.shared.createLink(
+            options: CreateLinkOptions(templateId: "template-1", templateSlug: "promo")
+        )
+
+        XCTAssertEqual(result.url, "https://links.example.com/promo/abc")
+    }
+
     func testIsFirstLaunchIsFalseBeforeInitializeOnLaterLaunch() async throws {
         _ = try await launch()
 

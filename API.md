@@ -35,19 +35,19 @@ Initializes the SDK with configuration and reports the install.
 ```swift
 func initialize(
     config: LinkFortyConfig,
-    attributionWindowHours: Int = 168,
+    attributionWindowHours: Int? = nil,
     deviceId: String? = nil
 ) async throws -> InstallResponse
 ```
 
 **Parameters:**
 - `config`: SDK configuration (required)
-- `attributionWindowHours`: Attribution window in hours (default: 168 = 7 days)
+- `attributionWindowHours`: Attribution window in hours (default: `config.attributionWindowHours`, which defaults to 168 = 7 days)
 - `deviceId`: Optional device identifier for attribution
 
 **Returns:** `InstallResponse` with attribution data
 
-**Throws:** `LinkFortyError` if initialization fails
+**Throws:** `LinkFortyError` if initialization fails. If the install can't be reported (for example, the device is offline), the SDK stays uninitialized and `initialize()` can be called again.
 
 **Example:**
 ```swift
@@ -73,6 +73,8 @@ func handleDeepLink(url: URL)
 
 **Parameters:**
 - `url`: The deep link URL to handle
+
+A link handed over before `initialize()` has configured the SDK, as when a link launches the app, is held and resolved once it has.
 
 **Example:**
 ```swift
@@ -104,6 +106,8 @@ func onDeferredDeepLink(_ callback: @escaping DeferredDeepLinkCallback)
 
 **Parameters:**
 - `callback`: Closure invoked with deep link data (or nil for organic installs)
+
+Called once, on the launch that reports the install. Can be registered before or after `initialize()`.
 
 **Callback Type:**
 ```swift
@@ -398,7 +402,7 @@ if LinkForty.shared.isFirstLaunch() {
 
 #### clearData()
 
-Clears all stored SDK data.
+Clears all stored SDK data: the install ID and attribution, queued events and the last-click attribution context. Registered callbacks are kept. The next launch is a first launch and reports a new install.
 
 ```swift
 func clearData()

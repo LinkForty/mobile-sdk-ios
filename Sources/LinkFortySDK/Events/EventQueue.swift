@@ -51,6 +51,22 @@ class EventQueue {
 
     /// Returns all queued events without removing them
     /// - Returns: Array of queued events
+    /// Removes and returns every queued event, oldest first.
+    func drain() -> [EventRequest] {
+        accessQueue.sync {
+            let events = queue
+            queue.removeAll()
+            return events
+        }
+    }
+
+    /// Puts events back at the front of the queue, ahead of anything queued since.
+    func requeue(_ events: [EventRequest]) {
+        accessQueue.sync {
+            queue = Array((events + queue).prefix(maxQueueSize))
+        }
+    }
+
     func peek() -> [EventRequest] {
         accessQueue.sync {
             Array(queue)

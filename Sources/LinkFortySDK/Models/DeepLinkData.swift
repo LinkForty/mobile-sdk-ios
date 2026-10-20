@@ -128,15 +128,19 @@ public struct DeepLinkData: Codable, Equatable {
         androidURL = try container.decodeIfPresent(String.self, forKey: .androidURL)
         webURL = try container.decodeIfPresent(String.self, forKey: .webURL)
         utmParameters = try container.decodeIfPresent(UTMParameters.self, forKey: .utmParameters)
-        customParameters = try container.decodeIfPresent([String: String].self, forKey: .customParameters)
+        // Links may store numbers, booleans or objects as parameters; each is
+        // delivered in its string form (JSON for objects and arrays).
+        customParameters = try container.decodeIfPresent([String: ParameterValue].self, forKey: .customParameters)?
+            .compactMapValues(\.string)
         deepLinkPath = try container.decodeIfPresent(String.self, forKey: .deepLinkPath)
         appScheme = try container.decodeIfPresent(String.self, forKey: .appScheme)
         linkId = try container.decodeIfPresent(String.self, forKey: .linkId)
 
-        // Decode date from ISO 8601 string
+        // Decode date from ISO 8601 string, with or without fractional seconds
         if let dateString = try container.decodeIfPresent(String.self, forKey: .clickedAt) {
-            let formatter = ISO8601DateFormatter()
-            clickedAt = formatter.date(from: dateString)
+            let fractional = ISO8601DateFormatter()
+            fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            clickedAt = fractional.date(from: dateString) ?? ISO8601DateFormatter().date(from: dateString)
         } else {
             clickedAt = nil
         }
@@ -177,5 +181,73 @@ extension DeepLinkData: CustomStringConvertible {
             utmSource: \(utmParameters?.source ?? "nil")
         )
         """
+    }
+}
+
+// MARK: - Parameter values
+
+/// A deep link parameter of any JSON type, read as a string.
+private struct ParameterValue: Decodable {
+    let string: String?
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            string = nil
+        } else if let value = try? container.decode(String.self) {
+            string = value
+        } else if let value = try? container.decode(Bool.self) {
+            string = value ? "true" : "false"
+        } else if let value = try? container.decode(Int64.self) {
+            string = String(value)
+        } else if let value = try? container.decode(Double.self) {
+            string = String(value)
+        } else {
+            let json = try container.decode(JSONValue.self).object
+            let data = try JSONSerialization.data(withJSONObject: json, options: [.sortedKeys, .fragmentsAllowed])
+            string = String(data: data, encoding: .utf8)
+        }
+    }
+}
+
+/// Any JSON value, for re-serializing nested parameters.
+private enum JSONValue: Decodable {
+    case string(String)
+    case bool(Bool)
+    case int(Int64)
+    case double(Double)
+    case array([JSONValue])
+    case object([String: JSONValue])
+    case null
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            self = .null
+        } else if let value = try? container.decode(String.self) {
+            self = .string(value)
+        } else if let value = try? container.decode(Bool.self) {
+            self = .bool(value)
+        } else if let value = try? container.decode(Int64.self) {
+            self = .int(value)
+        } else if let value = try? container.decode(Double.self) {
+            self = .double(value)
+        } else if let value = try? container.decode([JSONValue].self) {
+            self = .array(value)
+        } else {
+            self = .object(try container.decode([String: JSONValue].self))
+        }
+    }
+
+    var object: Any {
+        switch self {
+        case .string(let value): return value
+        case .bool(let value): return value
+        case .int(let value): return value
+        case .double(let value): return value
+        case .array(let values): return values.map(\.object)
+        case .object(let values): return values.mapValues(\.object)
+        case .null: return NSNull()
+        }
     }
 }
