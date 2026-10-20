@@ -172,6 +172,37 @@ final class AttributionManagerTests: XCTestCase {
         XCTAssertTrue(mockStorageManager.hasLaunchedCalled)
     }
 
+    func testReportInstallWithStoredInstallIdReturnsCachedAttributionWithoutRequest() async throws {
+        // Arrange
+        let cachedData = DeepLinkData(shortCode: "abc123", iosURL: "myapp://welcome")
+        mockStorageManager.mockInstallId = "stored-install-id"
+        mockStorageManager.mockInstallData = cachedData
+
+        // Act
+        let response = try await sut.reportInstall(attributionWindowHours: 168)
+
+        // Assert
+        XCTAssertNil(mockNetworkManager.lastEndpoint)
+        XCTAssertEqual(response.installId, "stored-install-id")
+        XCTAssertTrue(response.attributed)
+        XCTAssertEqual(response.deepLinkData?.shortCode, "abc123")
+        XCTAssertNil(mockStorageManager.savedInstallId)
+    }
+
+    func testReportInstallWithStoredInstallIdAndNoAttributionReturnsOrganic() async throws {
+        // Arrange
+        mockStorageManager.mockInstallId = "stored-install-id"
+
+        // Act
+        let response = try await sut.reportInstall(attributionWindowHours: 168)
+
+        // Assert
+        XCTAssertNil(mockNetworkManager.lastEndpoint)
+        XCTAssertEqual(response.installId, "stored-install-id")
+        XCTAssertFalse(response.attributed)
+        XCTAssertNil(response.deepLinkData)
+    }
+
     func testReportInstallCollectsFingerprint() async throws {
         // Arrange
         let expectedResponse = InstallResponse(

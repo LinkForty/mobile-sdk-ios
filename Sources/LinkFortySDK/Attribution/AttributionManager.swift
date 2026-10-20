@@ -76,6 +76,10 @@ final class AttributionManager {
 
     /// Reports an install to the backend and retrieves attribution data
     ///
+    /// The install is reported once per installation. When an install ID is
+    /// already stored, the cached attribution is returned without a request, so
+    /// a later launch never records a second install or matches the click again.
+    ///
     /// - Parameters:
     ///   - attributionWindowHours: Attribution window in hours
     ///   - deviceId: Optional device ID (IDFA/IDFV) if user consented
@@ -87,6 +91,18 @@ final class AttributionManager {
         deviceId: String? = nil,
         appToken: String? = nil
     ) async throws -> InstallResponse {
+        if let storedInstallId = storageManager.getInstallId() {
+            let cachedData = storageManager.getInstallData()
+            LinkFortyLogger.log("Install already reported (installId: \(storedInstallId)); using cached attribution")
+            return InstallResponse(
+                installId: storedInstallId,
+                attributed: cachedData != nil,
+                confidenceScore: cachedData != nil ? 100 : 0,
+                matchedFactors: [],
+                deepLinkData: cachedData
+            )
+        }
+
         // Collect device fingerprint
         let fingerprint = fingerprintCollector.collectFingerprint(
             attributionWindowHours: attributionWindowHours,

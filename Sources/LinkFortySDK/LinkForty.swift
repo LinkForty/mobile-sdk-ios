@@ -29,6 +29,14 @@ public final class LinkForty {
     private let initQueue = DispatchQueue(label: "com.linkforty.sdk.init", qos: .userInitiated)
     private var isInitialized = false
 
+    /// Whether this launch is the app's first, read from storage before the
+    /// install is reported so it stays true for the whole launch.
+    private var firstLaunchThisSession: Bool?
+
+    /// Storage and session the managers are built with. Tests replace them.
+    var userDefaults: UserDefaultsProtocol = UserDefaults.standard
+    var urlSession: URLSessionProtocol = URLSession.shared
+
     // MARK: - Initialization
 
     private init() {}
@@ -76,6 +84,12 @@ public final class LinkForty {
             }
         }
 
+        _ = isFirstLaunch()
+
+        // Only the launch that reports the install delivers a deferred deep link;
+        // later launches get the cached attribution without a callback.
+        let isNewInstall = attributionManager!.getInstallId() == nil
+
         // Report install and get attribution data (outside the serial queue)
         let response = try await attributionManager!.reportInstall(
             attributionWindowHours: attributionWindowHours,
@@ -84,7 +98,7 @@ public final class LinkForty {
         )
 
         // If attributed, notify deferred deep link handler
-        if response.attributed, let deepLinkData = response.deepLinkData {
+        if isNewInstall, response.attributed, let deepLinkData = response.deepLinkData {
             deepLinkHandler?.deliverDeferredDeepLink(deepLinkData)
         }
 
@@ -96,8 +110,8 @@ public final class LinkForty {
     /// Creates the SDK's managers and wires the shared attribution context into
     /// the event tracker and deep-link handler. Must be called on `initQueue`.
     private func setUpManagers(config: LinkFortyConfig) {
-        let storageManager = StorageManager()
-        let networkManager = NetworkManager(config: config)
+        let storageManager = StorageManager(userDefaults: userDefaults)
+        let networkManager = NetworkManager(config: config, session: urlSession)
         let fingerprintCollector = FingerprintCollector()
         let attributionContext = AttributionContext(debug: config.debug)
 
@@ -353,13 +367,21 @@ public final class LinkForty {
         return attributionManager?.getInstallData()
     }
 
-    /// Returns whether this is the first launch
+    /// Returns whether this is the app's first launch since installation
+    ///
+    /// Usable before `initialize()`, and stays true for the whole first launch:
+    /// the value is read from storage once per launch, before the install is
+    /// reported.
     public func isFirstLaunch() -> Bool {
-        guard isInitialized else {
-            return true
-        }
+        initQueue.sync {
+            if let firstLaunch = firstLaunchThisSession {
+                return firstLaunch
+            }
 
-        return attributionManager?.isFirstLaunch() ?? true
+            let firstLaunch = StorageManager(userDefaults: userDefaults).isFirstLaunch()
+            firstLaunchThisSession = firstLaunch
+            return firstLaunch
+        }
     }
 
     // MARK: - Data Management
@@ -371,6 +393,7 @@ public final class LinkForty {
         eventTracker?.clearQueue()
         deepLinkHandler?.clearCallbacks()
         externalUserId = nil
+        initQueue.sync { firstLaunchThisSession = nil }
 
         LinkFortyLogger.log("All SDK data cleared")
     }
@@ -387,6 +410,7 @@ public final class LinkForty {
             deepLinkHandler = nil
             externalUserId = nil
             isInitialized = false
+            firstLaunchThisSession = nil
 
             LinkFortyLogger.log("SDK reset to uninitialized state")
         }
