@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `clearData()` keeps the app's registered callbacks.
 - `createLink` with a `templateId` returns the server's short URL when the server provides one, so it carries the link's own domain.
 - `LinkFortyConfig.debug` turns on the SDK's logging.
+- `createLink` with a `templateId` records the external user ID. It posted to `/api/links`, which ignores `externalUserId`, so the link had no user and wasn't deduplicated per user. Every `createLink` now posts to `/api/sdk/v1/links`, which accepts `templateId`, and falls back to `/api/links` only when the server doesn't have the SDK endpoint (404).
 
 ### Changed
 - `onDeferredDeepLink` is called with `nil` on the launch that reports an organic (unattributed) install, as documented. It was previously called only for attributed installs, so code in an app's organic branch never ran; that code now runs once, on the first launch.

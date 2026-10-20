@@ -203,20 +203,63 @@ final class LaunchFlowTests: XCTestCase {
         XCTAssertEqual(opened, [link])
     }
 
-    func testCreateLinkWithTemplateReturnsTheServersShortURL() async throws {
+    private func initializeWithApiKey() async throws {
         endLaunch()
-        session.dataByPath["/api/links"] = Data(
-            #"{"id":"link-1","short_code":"abc","short_url":"https://links.example.com/promo/abc"}"#.utf8
-        )
         _ = try await LinkForty.shared.initialize(
             config: LinkFortyConfig(baseURL: URL(string: "https://api.example.com")!, apiKey: "key")
         )
+    }
+
+    private func requestBody(path: String) throws -> [String: Any] {
+        let request = try XCTUnwrap(session.requests.last { $0.url?.path == path })
+        return try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any])
+    }
+
+    func testCreateLinkWithTemplateUsesTheSDKEndpointAndKeepsTheUser() async throws {
+        session.dataByPath["/api/sdk/v1/links"] = Data(
+            #"{"url":"https://links.example.com/promo/abc","shortCode":"abc","linkId":"link-1","deduplicated":false}"#.utf8
+        )
+        try await initializeWithApiKey()
+        LinkForty.shared.setExternalUserId("user-1")
+
+        let result = try await LinkForty.shared.createLink(
+            options: CreateLinkOptions(templateId: "template-1", templateSlug: "promo")
+        )
+
+        let body = try requestBody(path: "/api/sdk/v1/links")
+        XCTAssertEqual(body["templateId"] as? String, "template-1")
+        XCTAssertEqual(body["externalUserId"] as? String, "user-1")
+        XCTAssertEqual(result.url, "https://links.example.com/promo/abc")
+        XCTAssertFalse(session.requests.contains { $0.url?.path == "/api/links" })
+    }
+
+    func testCreateLinkFallsBackWhenTheServerHasNoSDKEndpoint() async throws {
+        session.statusByPath["/api/sdk/v1/links"] = 404
+        session.dataByPath["/api/sdk/v1/links"] = Data(#"{"error":"Not Found"}"#.utf8)
+        session.dataByPath["/api/links"] = Data(
+            #"{"id":"link-1","short_code":"abc","short_url":"https://links.example.com/promo/abc"}"#.utf8
+        )
+        try await initializeWithApiKey()
 
         let result = try await LinkForty.shared.createLink(
             options: CreateLinkOptions(templateId: "template-1", templateSlug: "promo")
         )
 
         XCTAssertEqual(result.url, "https://links.example.com/promo/abc")
+        XCTAssertEqual(result.linkId, "link-1")
+    }
+
+    func testCreateLinkDoesNotFallBackOnOtherErrors() async throws {
+        session.statusByPath["/api/sdk/v1/links"] = 400
+        session.dataByPath["/api/sdk/v1/links"] = Data(#"{"error":"Bad Request"}"#.utf8)
+        try await initializeWithApiKey()
+
+        do {
+            _ = try await LinkForty.shared.createLink(options: CreateLinkOptions(templateId: "template-1"))
+            XCTFail("Expected the error to be thrown")
+        } catch {}
+
+        XCTAssertFalse(session.requests.contains { $0.url?.path == "/api/links" })
     }
 
     func testIsFirstLaunchIsFalseBeforeInitializeOnLaterLaunch() async throws {
