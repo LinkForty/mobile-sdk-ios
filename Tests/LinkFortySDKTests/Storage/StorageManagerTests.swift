@@ -131,6 +131,39 @@ final class StorageManagerTests: XCTestCase {
         XCTAssertEqual(retrieved?.linkId, "link-uuid-123")
     }
 
+    func testInstallDataKeepsMatchCertaintyFields() {
+        let testData = DeepLinkData(
+            shortCode: "abc123",
+            confidenceScore: 85,
+            matchedFactors: ["ip", "userAgent"],
+            attributionMethod: "fingerprint",
+            competingLinks: 2
+        )
+
+        sut.saveInstallData(testData)
+        Thread.sleep(forTimeInterval: 0.1)
+        let retrieved = sut.getInstallData()
+
+        XCTAssertEqual(retrieved, testData)
+        XCTAssertEqual(retrieved?.competingLinks, 2)
+        XCTAssertEqual(retrieved?.attributionMethod, "fingerprint")
+    }
+
+    /// Install data saved before the match fields existed still loads.
+    func testInstallDataSavedWithoutMatchCertaintyFieldsDecodes() {
+        let saved = #"{"shortCode":"abc123","iosUrl":"myapp://product/456","linkId":"link-1"}"#
+        mockUserDefaults.set(Data(saved.utf8), forKey: StorageKeys.installData)
+
+        let retrieved = sut.getInstallData()
+
+        XCTAssertEqual(retrieved?.shortCode, "abc123")
+        XCTAssertEqual(retrieved?.linkId, "link-1")
+        XCTAssertNil(retrieved?.confidenceScore)
+        XCTAssertNil(retrieved?.matchedFactors)
+        XCTAssertNil(retrieved?.attributionMethod)
+        XCTAssertNil(retrieved?.competingLinks)
+    }
+
     // MARK: - First Launch Tests
 
     func testIsFirstLaunchReturnsTrueInitially() {

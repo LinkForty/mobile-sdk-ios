@@ -60,6 +60,14 @@ struct DeepLinkData {
     let appScheme: String?
     let clickedAt: Date?
     let linkId: String?
+    /// Match details, set on a deferred deep link only (nil on a direct open)
+    let confidenceScore: Double?         // 0-100
+    let matchedFactors: [String]?
+    let attributionMethod: String?       // "fingerprint"
+    /// Other links with a click from the install's network that also reached the
+    /// confidence threshold. 0 = none in contention; > 0 = treat the match as
+    /// unverified for sensitive links (sign-in, gift), e.g. ask the user to confirm.
+    let competingLinks: Int?
 }
 
 struct UTMParameters {
@@ -74,10 +82,16 @@ struct InstallResponse {
     let installId: String
     let attributed: Bool
     /// Attribution confidence score (0-100)
-    let confidenceScore: Int
+    let confidenceScore: Double
     /// Matched fingerprint factors (e.g., ["ip", "user_agent", "timezone"])
     let matchedFactors: [String]
     let deepLinkData: DeepLinkData?
+    /// "fingerprint" when matched to a click, "none" when organic.
+    /// nil from servers that don't send it and on launches after the first.
+    let attributionMethod: String?
+    /// Same meaning as DeepLinkData.competingLinks (0 when organic).
+    /// nil from servers that don't send it and on launches after the first.
+    let competingLinks: Int?
 }
 
 struct CreateLinkOptions {

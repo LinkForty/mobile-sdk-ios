@@ -109,6 +109,98 @@ final class InstallResponseTests: XCTestCase {
         XCTAssertNotNil(response.deepLinkData?.clickedAt)
     }
 
+    // MARK: - Match Certainty
+
+    func testDecodesMatchCertaintyFields() throws {
+        let json = """
+        {
+            "installId": "install-123",
+            "attributed": true,
+            "confidenceScore": 85,
+            "matchedFactors": ["userAgent", "timezone"],
+            "attributionMethod": "fingerprint",
+            "competingLinks": 2,
+            "deepLinkData": {
+                "shortCode": "abc123",
+                "confidenceScore": 85,
+                "matchedFactors": ["userAgent", "timezone"],
+                "attributionMethod": "fingerprint",
+                "competingLinks": 2
+            }
+        }
+        """
+
+        let response = try decode(json)
+
+        XCTAssertEqual(response.attributionMethod, "fingerprint")
+        XCTAssertEqual(response.competingLinks, 2)
+        XCTAssertEqual(response.deepLinkData?.confidenceScore, 85)
+        XCTAssertEqual(response.deepLinkData?.matchedFactors, ["userAgent", "timezone"])
+        XCTAssertEqual(response.deepLinkData?.attributionMethod, "fingerprint")
+        XCTAssertEqual(response.deepLinkData?.competingLinks, 2)
+    }
+
+    func testDecodesOrganicMatchCertaintyFields() throws {
+        let json = """
+        {
+            "installId": "install-123",
+            "attributed": false,
+            "confidenceScore": 0,
+            "matchedFactors": [],
+            "attributionMethod": "none",
+            "competingLinks": 0,
+            "deepLinkData": {}
+        }
+        """
+
+        let response = try decode(json)
+
+        XCTAssertEqual(response.attributionMethod, "none")
+        XCTAssertEqual(response.competingLinks, 0)
+        XCTAssertNil(response.deepLinkData)
+    }
+
+    /// Servers that predate the fields omit them; the response still decodes.
+    func testMatchCertaintyFieldsAreNilWhenServerOmitsThem() throws {
+        let json = """
+        {
+            "installId": "install-123",
+            "attributed": true,
+            "confidenceScore": 85,
+            "matchedFactors": ["userAgent"],
+            "deepLinkData": { "shortCode": "abc123" }
+        }
+        """
+
+        let response = try decode(json)
+
+        XCTAssertNil(response.attributionMethod)
+        XCTAssertNil(response.competingLinks)
+        XCTAssertEqual(response.deepLinkData?.shortCode, "abc123")
+        XCTAssertNil(response.deepLinkData?.competingLinks)
+    }
+
+    func testUnexpectedMatchCertaintyTypesDecodeAsNil() throws {
+        let json = """
+        {
+            "installId": "install-123",
+            "attributed": true,
+            "confidenceScore": 85,
+            "matchedFactors": [],
+            "attributionMethod": 1,
+            "competingLinks": "two",
+            "deepLinkData": { "shortCode": "abc123", "competingLinks": null }
+        }
+        """
+
+        let response = try decode(json)
+
+        XCTAssertNil(response.attributionMethod)
+        XCTAssertNil(response.competingLinks)
+        XCTAssertEqual(response.deepLinkData?.shortCode, "abc123")
+        XCTAssertNil(response.deepLinkData?.competingLinks)
+    }
+
     // MARK: - Required Fields
 
     func testThrowsWhenInstallIdMissing() {
@@ -131,7 +223,9 @@ final class InstallResponseTests: XCTestCase {
             attributed: true,
             confidenceScore: 85,
             matchedFactors: ["userAgent"],
-            deepLinkData: DeepLinkData(shortCode: "abc123", iosURL: "myapp://product/456")
+            deepLinkData: DeepLinkData(shortCode: "abc123", iosURL: "myapp://product/456", competingLinks: 1),
+            attributionMethod: "fingerprint",
+            competingLinks: 1
         )
 
         let data = try JSONEncoder().encode(original)
@@ -142,5 +236,7 @@ final class InstallResponseTests: XCTestCase {
         XCTAssertEqual(decoded.confidenceScore, original.confidenceScore)
         XCTAssertEqual(decoded.matchedFactors, original.matchedFactors)
         XCTAssertEqual(decoded.deepLinkData, original.deepLinkData)
+        XCTAssertEqual(decoded.attributionMethod, "fingerprint")
+        XCTAssertEqual(decoded.competingLinks, 1)
     }
 }

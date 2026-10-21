@@ -25,6 +25,19 @@ public struct InstallResponse: Codable {
     /// Deep link data if attributed, nil if organic
     public let deepLinkData: DeepLinkData?
 
+    /// How the install was attributed: `"fingerprint"` when matched to a click, `"none"` when organic.
+    /// Nil when the server doesn't send it, and on launches after the first, which return the
+    /// cached attribution without a request.
+    public let attributionMethod: String?
+
+    /// How many other links had a click from the install's network that also reached the
+    /// confidence threshold. 0 means no other link was in contention (also 0 for an organic
+    /// install); above 0, another device's tap may be what led to this install, so treat the
+    /// match as unverified before acting on a sensitive link (sign-in, gift), for example by
+    /// asking the user to confirm. Nil when the server doesn't send it, and on launches after
+    /// the first (the cached `deepLinkData` keeps the value from the install).
+    public let competingLinks: Int?
+
     // MARK: - Codable
 
     enum CodingKeys: String, CodingKey {
@@ -33,6 +46,8 @@ public struct InstallResponse: Codable {
         case confidenceScore
         case matchedFactors
         case deepLinkData
+        case attributionMethod
+        case competingLinks
     }
 
     public init(from decoder: Decoder) throws {
@@ -54,6 +69,10 @@ public struct InstallResponse: Codable {
             deepLinkData = nil
             LinkFortyLogger.log("Ignoring undecodable deepLinkData in install response: \(error)")
         }
+
+        // Older servers omit these; a missing or unexpected value leaves them nil.
+        attributionMethod = try? container.decodeIfPresent(String.self, forKey: .attributionMethod)
+        competingLinks = try? container.decodeIfPresent(Int.self, forKey: .competingLinks)
     }
 
     /// Creates an install response
@@ -62,13 +81,17 @@ public struct InstallResponse: Codable {
         attributed: Bool,
         confidenceScore: Double,
         matchedFactors: [String],
-        deepLinkData: DeepLinkData? = nil
+        deepLinkData: DeepLinkData? = nil,
+        attributionMethod: String? = nil,
+        competingLinks: Int? = nil
     ) {
         self.installId = installId
         self.attributed = attributed
         self.confidenceScore = confidenceScore
         self.matchedFactors = matchedFactors
         self.deepLinkData = deepLinkData
+        self.attributionMethod = attributionMethod
+        self.competingLinks = competingLinks
     }
 }
 
@@ -81,7 +104,9 @@ extension InstallResponse: CustomStringConvertible {
             installId: \(installId),
             attributed: \(attributed),
             confidenceScore: \(confidenceScore),
-            matchedFactors: \(matchedFactors)
+            matchedFactors: \(matchedFactors),
+            attributionMethod: \(attributionMethod ?? "nil"),
+            competingLinks: \(competingLinks.map(String.init) ?? "nil")
         )
         """
     }

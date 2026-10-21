@@ -509,7 +509,15 @@ public let deepLinkPath: String?       // Deep link path for in-app routing (e.g
 public let appScheme: String?          // App URI scheme (e.g., "myapp")
 public let clickedAt: Date?            // When the link was clicked (ISO 8601)
 public let linkId: String?             // Link UUID from the backend
+
+// Match details: set on a deferred deep link, nil on a direct open
+public let confidenceScore: Double?    // Confidence the install came from this click (0-100)
+public let matchedFactors: [String]?   // Matched fingerprint factors
+public let attributionMethod: String?  // "fingerprint"
+public let competingLinks: Int?        // Other links in contention (see below)
 ```
+
+`competingLinks` counts the other links that had a click from the install's network and also reached the confidence threshold. At 0 no other link was in contention; above 0, another device's tap may be what led to this install, so treat the match as unverified before acting on a sensitive link (sign-in, gift), for example by asking the user to confirm. The four match fields are `nil` when the server doesn't send them.
 
 ### Example
 
@@ -547,7 +555,11 @@ public let attributed: Bool            // Whether install was attributed
 public let confidenceScore: Double     // Confidence score (0-100)
 public let matchedFactors: [String]    // Matched fingerprint factors
 public let deepLinkData: DeepLinkData? // Deep link data if attributed
+public let attributionMethod: String?  // "fingerprint" when matched to a click, "none" when organic
+public let competingLinks: Int?        // Other links in contention; 0 when organic
 ```
+
+`competingLinks` has the same meaning as on [DeepLinkData](#deeplinkdata). Both fields are `nil` when the server doesn't send them, and on launches after the first, which return the cached attribution without a request (the cached `deepLinkData` keeps its match fields).
 
 ### Example
 
@@ -560,6 +572,7 @@ print("Attributed: \(response.attributed)")
 if response.attributed {
     print("Confidence: \(response.confidenceScore)%")
     print("Matched factors: \(response.matchedFactors)")
+    print("Competing links: \(response.competingLinks.map(String.init) ?? "unknown")")
 
     if let data = response.deepLinkData {
         print("Short code: \(data.shortCode)")

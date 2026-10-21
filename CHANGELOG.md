@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+### Added
+- `InstallResponse.attributionMethod` (`"fingerprint"` or `"none"`) and `InstallResponse.competingLinks`, and on a deferred deep link `DeepLinkData.confidenceScore`, `matchedFactors`, `attributionMethod` and `competingLinks`. `competingLinks` counts the other links that had a click from the install's network and also reached the confidence threshold: at 0 nothing else was in contention; above 0, another device's tap may be what led to the install, so an app acting on a sensitive link (sign-in, gift) can treat the match as unverified, for example by asking the user to confirm. All are optional and `nil` when the server doesn't send them; the `DeepLinkData` fields are `nil` on a direct open. The cached install attribution keeps them, and attribution cached by an earlier SDK version still loads.
 
 ## [1.7.0] - 2026-10-21
 ### Added
