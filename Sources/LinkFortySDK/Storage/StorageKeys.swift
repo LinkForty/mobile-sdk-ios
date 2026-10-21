@@ -24,4 +24,7 @@ enum StorageKeys {
 
     /// Active last-click attribution context key (ActiveAttribution JSON)
     static let attribution = "\(prefix).attribution"
+
+    /// Events waiting to be sent
+    static let eventQueue = "\(prefix).eventQueue"
 }

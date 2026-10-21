@@ -7,6 +7,9 @@
 //
 
 import Foundation
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// Main SDK class - singleton interface for LinkForty
 @available(iOS 13.0, macOS 10.15, *)
@@ -31,6 +34,9 @@ public final class LinkForty {
     /// Links handed to `handleDeepLink(url:)` before `initialize()`, as when a
     /// link cold-starts the app. Resolved once the SDK is configured.
     private var pendingDeepLinks: [URL] = []
+
+    /// Sends queued events when the app returns to the foreground.
+    private var foregroundObserver: NSObjectProtocol?
 
     private var externalUserId: String?
     private let initQueue = DispatchQueue(label: "com.linkforty.sdk.init", qos: .userInitiated)
@@ -129,7 +135,29 @@ public final class LinkForty {
 
         LinkFortyLogger.log("SDK initialized successfully (attributed: \(response.attributed))")
 
+        // Events queued on an earlier launch go out now that the install is known.
+        observeForeground()
+        let tracker = initQueue.sync { eventTracker }
+        Task { await tracker?.flushQueue() }
+
         return response
+    }
+
+    /// Flushes the event queue each time the app returns to the foreground.
+    private func observeForeground() {
+        #if canImport(UIKit) && !os(watchOS)
+        initQueue.sync {
+            guard foregroundObserver == nil else { return }
+            foregroundObserver = NotificationCenter.default.addObserver(
+                forName: UIApplication.willEnterForegroundNotification,
+                object: nil,
+                queue: nil
+            ) { [weak self] _ in
+                guard let tracker = self?.initQueue.sync(execute: { self?.eventTracker }) else { return }
+                Task { await tracker.flushQueue() }
+            }
+        }
+        #endif
     }
 
     /// Creates the SDK's managers and wires the shared attribution context into
@@ -152,7 +180,8 @@ public final class LinkForty {
         self.eventTracker = EventTracker(
             networkManager: networkManager,
             storageManager: storageManager,
-            attributionContext: attributionContext
+            attributionContext: attributionContext,
+            eventQueue: EventQueue(store: userDefaults)
         )
 
         deepLinkHandler.configure(
@@ -452,6 +481,10 @@ public final class LinkForty {
             externalUserId = nil
             isInitialized = false
             firstLaunchThisSession = nil
+            if let observer = foregroundObserver {
+                NotificationCenter.default.removeObserver(observer)
+                foregroundObserver = nil
+            }
 
             LinkFortyLogger.log("SDK reset to uninitialized state")
         }

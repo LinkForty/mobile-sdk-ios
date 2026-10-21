@@ -16,7 +16,7 @@ Native iOS SDK for [LinkForty](https://github.com/LinkForty/core) — the open-s
 - **Event Tracking**: Track in-app events and conversions
 - **Last-Click Attribution**: In-app events are automatically credited to the deep link that most recently opened the app
 - **Screen-Flow Tracking**: Report screen views to see what users do after clicking a link
-- **Offline Support**: Queue events when offline with automatic retry
+- **Offline Support**: Events are kept on the device until the server has them, sent on the next launch or return to the foreground, and stored once however often they are retried
 - **Privacy-First**: No IDFA collection, complies with Apple's privacy requirements
 - **Programmatic Link Creation**: Create short links directly from your app
 - **Zero Dependencies**: Lightweight, no third-party dependencies
