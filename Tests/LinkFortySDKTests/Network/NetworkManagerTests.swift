@@ -391,10 +391,13 @@ class MockURLSession: URLSessionProtocol {
     var dataByPath: [String: Data] = [:]
     /// HTTP status codes by URL path, used instead of `mockResponse`'s when present.
     var statusByPath: [String: Int] = [:]
+    /// Called with each request as it is sent.
+    var onRequest: ((URLRequest) -> Void)?
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
         lastRequest = request
         requests.append(request)
+        onRequest?(request)
 
         if !queuedErrors.isEmpty {
             throw queuedErrors.removeFirst()

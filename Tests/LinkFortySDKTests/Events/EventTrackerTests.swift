@@ -297,37 +297,25 @@ final class EventTrackerTests: XCTestCase {
 
     // MARK: - Network Error Tests
 
-    func testTrackEventNetworkError() async {
-        // Arrange
+    func testTrackEventNetworkErrorReturnsNormallyAndKeepsTheEvent() async throws {
         mockNetworkManager.mockError = LinkFortyError.networkError(
             NSError(domain: "test", code: -1)
         )
 
-        // Act & Assert
-        do {
-            try await sut.trackEvent(name: "test")
-            XCTFail("Should throw error")
-        } catch {
-            // Expected
-            XCTAssertNotNil(error)
-        }
+        try await sut.trackEvent(name: "test")
+
+        XCTAssertEqual(mockEventQueue.enqueuedEvents.map(\.eventName), ["test"])
     }
 
-    func testTrackEventServerError() async {
-        // Arrange
+    func testTrackEventServerErrorReturnsNormallyAndKeepsTheEvent() async throws {
         mockNetworkManager.mockError = LinkFortyError.invalidResponse(
             statusCode: 500,
             message: "Server error"
         )
 
-        // Act & Assert
-        do {
-            try await sut.trackEvent(name: "test")
-            XCTFail("Should throw error")
-        } catch {
-            // Expected
-            XCTAssertNotNil(error)
-        }
+        try await sut.trackEvent(name: "test")
+
+        XCTAssertEqual(mockEventQueue.enqueuedEvents.map(\.eventName), ["test"])
     }
 }
 

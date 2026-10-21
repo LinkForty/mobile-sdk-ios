@@ -11,6 +11,9 @@ import Foundation
 /// Request payload for tracking events
 struct EventRequest: Codable {
     /// The install ID from attribution
+    /// This event's id, the same on every retry, so the server stores it once
+    let clientEventId: String
+
     let installId: String
 
     /// Name of the event (e.g., "purchase", "signup")
@@ -53,8 +56,10 @@ struct EventRequest: Codable {
         attributedLinkId: String? = nil,
         attributedClickId: String? = nil,
         linkOpenedAt: String? = nil,
-        sessionId: String? = nil
+        sessionId: String? = nil,
+        clientEventId: String = UUID().uuidString.lowercased()
     ) {
+        self.clientEventId = clientEventId
         self.installId = installId
         self.eventName = eventName
         self.eventData = eventData.mapValues { AnyCodable($0) }
@@ -74,6 +79,7 @@ struct EventRequest: Codable {
     // MARK: - Codable
 
     enum CodingKeys: String, CodingKey {
+        case clientEventId
         case installId
         case eventName
         case eventData

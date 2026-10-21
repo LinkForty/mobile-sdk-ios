@@ -22,6 +22,10 @@ final class EventTracker {
     private let screenLock = NSLock()
     private var lastScreenName: String?
 
+    /// Guards `isFlushing`, so a flush started while one runs returns at once.
+    private let flushLock = NSLock()
+    private var isFlushing = false
+
     // MARK: - Initialization
 
     /// Creates an event tracker
@@ -45,10 +49,13 @@ final class EventTracker {
     // MARK: - Event Tracking
 
     /// Tracks a custom event
+    ///
+    /// An event that can't be sent now (no connection, or a server error) is
+    /// queued on the device and sent later, and the call returns normally.
     /// - Parameters:
     ///   - name: Event name (e.g., "purchase", "signup")
     ///   - properties: Optional event properties (must be JSON-serializable)
-    /// - Throws: LinkFortyError if tracking fails
+    /// - Throws: LinkFortyError for an invalid event, or one the server rejects
     func trackEvent(name: String, properties: [String: Any]? = nil) async throws {
         // Validate event name
         guard !name.isEmpty else {
@@ -75,19 +82,23 @@ final class EventTracker {
             sessionId: stamp.sessionId
         )
 
-        // Try to send immediately
+        // Stored before it is sent, so the event survives the app closing
+        // mid-send; a flush that sends it too is answered as a repeat.
+        let stored = eventQueue.enqueue(event)
         do {
             try await sendEvent(event)
+            eventQueue.remove(event)
             LinkFortyLogger.log("Event tracked: \(name)")
 
             // If send succeeds, try to flush queue
             await flushQueue()
+        } catch where Self.isRetryable(error) {
+            // A later attempt can succeed: it stays on the device and is sent then.
+            LinkFortyLogger.log(stored
+                ? "Event queued due to error: \(error)"
+                : "Event queue full, event not kept: \(error)")
         } catch {
-            // Queue it if a later attempt could succeed; a rejected event is not retried.
-            if Self.isRetryable(error) {
-                eventQueue.enqueue(event)
-                LinkFortyLogger.log("Event queued due to error: \(error)")
-            }
+            eventQueue.remove(event)
             throw error
         }
     }
@@ -153,27 +164,46 @@ final class EventTracker {
 
     // MARK: - Queue Management
 
-    /// Sends queued events in order and returns when they are sent. Stops at the
-    /// first event that fails with an error worth retrying and keeps it and the
-    /// rest queued; drops an event the server rejects.
+    /// Sends queued events in order and returns when they are sent. An event
+    /// leaves the queue once the server has it, or has rejected it; the first
+    /// one that fails with an error worth retrying stays at the head and stops
+    /// the flush. A flush started while another runs returns at once: the
+    /// running flush sends everything queued.
     func flushQueue() async {
-        let pending = eventQueue.drain()
-        guard !pending.isEmpty else { return }
+        guard beginFlush() else { return }
+        defer { endFlush() }
 
-        LinkFortyLogger.log("Flushing event queue (\(pending.count) events)")
+        if !eventQueue.isEmpty {
+            LinkFortyLogger.log("Flushing event queue (\(eventQueue.count) events)")
+        }
 
-        for (index, event) in pending.enumerated() {
+        while let event = eventQueue.first() {
             do {
                 try await sendEvent(event)
+                eventQueue.removeFirst(event)
                 LinkFortyLogger.log("Queued event sent: \(event.eventName)")
             } catch where Self.isRetryable(error) {
-                eventQueue.requeue(Array(pending[index...]))
                 LinkFortyLogger.log("Failed to send queued event, keeping it queued: \(error)")
                 return
             } catch {
+                eventQueue.removeFirst(event)
                 LinkFortyLogger.log("Dropping queued event the server rejected: \(error)")
             }
         }
+    }
+
+    private func beginFlush() -> Bool {
+        flushLock.lock()
+        defer { flushLock.unlock() }
+        guard !isFlushing else { return false }
+        isFlushing = true
+        return true
+    }
+
+    private func endFlush() {
+        flushLock.lock()
+        isFlushing = false
+        flushLock.unlock()
     }
 
     /// Network failures and server errors (5xx) can succeed later; anything else

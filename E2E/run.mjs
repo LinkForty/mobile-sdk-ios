@@ -71,6 +71,12 @@ function iosDevice(udid) {
     async openInBrowser(url) {
       simctl('openurl', udid, url);
     },
+    async background() {
+      simctl('launch', udid, 'com.apple.Preferences');
+    },
+    async foreground() {
+      simctl('launch', udid, bundleId);
+    },
     async closeBrowser() {
       quiet('terminate', udid, 'com.apple.mobilesafari');
     },

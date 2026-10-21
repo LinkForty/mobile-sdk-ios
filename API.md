@@ -207,7 +207,7 @@ func trackEvent(
 - `name`: Event name (e.g., "purchase", "signup")
 - `properties`: Optional event properties (must be JSON-serializable)
 
-**Throws:** `LinkFortyError` if tracking fails
+**Throws:** `LinkFortyError` for an invalid event, before `initialize()`, or when the server rejects the event (4xx). An event that can't be sent now is kept on the device and sent later, and the call returns normally.
 
 **Example:**
 ```swift
@@ -244,7 +244,7 @@ func trackRevenue(
 - `currency`: Currency code (e.g., "USD", "EUR")
 - `properties`: Optional additional properties
 
-**Throws:** `LinkFortyError` if tracking fails
+**Throws:** `LinkFortyError` for an invalid event, before `initialize()`, or when the server rejects the event (4xx). An event that can't be sent now is kept on the device and sent later, and the call returns normally.
 
 **Example:**
 ```swift
@@ -275,7 +275,7 @@ func trackScreenView(
 - `name`: Screen name (e.g., "ProductDetail"). Must not be empty.
 - `properties`: Optional additional properties
 
-**Throws:** `LinkFortyError` if tracking fails (including an empty screen name)
+**Throws:** `LinkFortyError` for an invalid event (including an empty screen name), before `initialize()`, or when the server rejects the event (4xx). An event that can't be sent now is kept on the device and sent later, and the call returns normally.
 
 **Example:**
 ```swift
@@ -292,7 +292,7 @@ For SwiftUI, prefer the [`.linkfortyScreen(_:)`](#viewlinkfortyscreen_properties
 
 #### flushEvents()
 
-Flushes the event queue, attempting to send all queued events.
+Sends queued events, oldest first, and returns when they are sent or one fails with an error worth retrying. You rarely need it: the queue is also sent after `initialize()`, when the app returns to the foreground, and after any event that sends successfully.
 
 ```swift
 func flushEvents() async
