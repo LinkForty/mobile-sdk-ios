@@ -389,6 +389,8 @@ class MockURLSession: URLSessionProtocol {
     var queuedErrors: [Error] = []
     /// Response bodies by URL path, used instead of `mockData` when present.
     var dataByPath: [String: Data] = [:]
+    /// HTTP status codes by URL path, used instead of `mockResponse`'s when present.
+    var statusByPath: [String: Int] = [:]
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
         lastRequest = request
@@ -403,7 +405,11 @@ class MockURLSession: URLSessionProtocol {
         }
 
         let body = request.url.flatMap { dataByPath[$0.path] } ?? mockData
-        guard let data = body, let response = mockResponse else {
+        let response = request.url
+            .flatMap { url in statusByPath[url.path].map { (url, $0) } }
+            .flatMap { HTTPURLResponse(url: $0, statusCode: $1, httpVersion: nil, headerFields: nil) }
+            ?? mockResponse
+        guard let data = body, let response else {
             throw NSError(domain: "MockURLSession", code: -1, userInfo: [
                 NSLocalizedDescriptionKey: "No mock data or response configured"
             ])

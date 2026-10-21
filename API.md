@@ -173,7 +173,7 @@ func createLink(options: CreateLinkOptions) async throws -> CreateLinkResult
 - `LinkFortyError.notInitialized` if SDK not initialized
 - `LinkFortyError.missingApiKey` if no API key configured
 
-**Note:** Requires an API key in `LinkFortyConfig`. If `templateId` is provided, uses the dashboard endpoint (`POST /api/links`). Otherwise, uses the simplified SDK endpoint (`POST /api/sdk/v1/links`) which auto-selects the organization's most recent template.
+**Note:** Requires an API key in `LinkFortyConfig`. Posts to the SDK link endpoint (`POST /api/sdk/v1/links`), which records the external user ID (from `setExternalUserId` or the option) and uses `templateId` when given, or the workspace's default template. A server without that endpoint (it returns 404) gets the request on `POST /api/links`.
 
 **Example:**
 ```swift
@@ -586,7 +586,7 @@ init(
 
 **Parameters:**
 - `templateId`: Template UUID (auto-selected if omitted)
-- `templateSlug`: Template slug (only needed with `templateId`)
+- `templateSlug`: Template slug, used to build the URL when the server doesn't return one (only needed with `templateId`)
 - `deepLinkParameters`: Deep link parameters for in-app routing (e.g., `["route": "VIDEO_VIEWER", "id": "..."]`)
 - `title`: Link title
 - `description`: Link description

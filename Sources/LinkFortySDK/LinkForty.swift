@@ -323,10 +323,10 @@ public final class LinkForty {
     /// - Throws: `LinkFortyError.notInitialized` if SDK not initialized,
     ///           `LinkFortyError.missingApiKey` if no API key configured
     ///
-    /// - Note: Requires an API key in `LinkFortyConfig`.
-    ///   If `templateId` is provided, uses the dashboard endpoint (`POST /api/links`).
-    ///   Otherwise, uses the simplified SDK endpoint (`POST /api/sdk/v1/links`)
-    ///   which auto-selects the organization's most recent template.
+    /// - Note: Requires an API key in `LinkFortyConfig`. Posts to the SDK link
+    ///   endpoint (`POST /api/sdk/v1/links`), which records the external user ID
+    ///   and uses `templateId` when given, or the workspace's default template.
+    ///   A server without that endpoint (404) gets the request on `POST /api/links`.
     public func createLink(options: CreateLinkOptions) async throws -> CreateLinkResult {
         guard isInitialized else {
             throw LinkFortyError.notInitialized
@@ -357,34 +357,34 @@ public final class LinkForty {
             resolvedOptions = options
         }
 
-        if resolvedOptions.templateId != nil {
-            // Use dashboard endpoint with explicit templateId
-            let response: DashboardCreateLinkResponse = try await networkManager.request(
-                endpoint: "/api/links",
-                method: .post,
-                body: resolvedOptions
-            )
-
-            // The server's short URL carries the link's own domain; older
-            // servers don't return one, so fall back to building it.
-            let templateSlug = resolvedOptions.templateSlug ?? ""
-            let pathSegment = templateSlug.isEmpty ? response.shortCode : "\(templateSlug)/\(response.shortCode)"
-            let url = response.shortUrl ?? config.baseURL.appendingPathComponent(pathSegment).absoluteString
-
-            return CreateLinkResult(
-                url: url,
-                shortCode: response.shortCode,
-                linkId: response.id,
-                deduplicated: nil
-            )
-        } else {
-            // Use simplified SDK endpoint (auto-selects template)
+        do {
             return try await networkManager.request(
                 endpoint: "/api/sdk/v1/links",
                 method: .post,
                 body: resolvedOptions
             )
+        } catch LinkFortyError.invalidResponse(statusCode: 404, _) {
+            LinkFortyLogger.log("No SDK link endpoint on this server; creating the link with /api/links")
         }
+
+        let response: DashboardCreateLinkResponse = try await networkManager.request(
+            endpoint: "/api/links",
+            method: .post,
+            body: resolvedOptions
+        )
+
+        // The server's short URL carries the link's own domain; older
+        // servers don't return one, so fall back to building it.
+        let templateSlug = resolvedOptions.templateSlug ?? ""
+        let pathSegment = templateSlug.isEmpty ? response.shortCode : "\(templateSlug)/\(response.shortCode)"
+        let url = response.shortUrl ?? config.baseURL.appendingPathComponent(pathSegment).absoluteString
+
+        return CreateLinkResult(
+            url: url,
+            shortCode: response.shortCode,
+            linkId: response.id,
+            deduplicated: nil
+        )
     }
 
     // MARK: - Attribution Data
