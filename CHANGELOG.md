@@ -8,12 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+## [1.6.0] - 2026-10-21
 ### Added
-- Events are kept on the device until the server has them. Each event is saved before it is sent and removed once the server answers, so an event still waiting when the app is closed, even mid-send, is sent on a later launch. The queue (up to 100 events) is restored by `initialize()` and sent after it, when the app returns to the foreground, and after any event that sends successfully.
-- Each event carries a `clientEventId`, assigned when it is tracked and the same on every retry. A server on `@linkforty/core` with `clientEventId` support stores a retried event once, including when an earlier attempt was stored but its reply was lost; an older server ignores the field.
+- Events are kept on the device until the server has them. Each event is saved before it is sent and removed once the server answers, so an event still waiting when the app is closed, even mid-send, is sent on a later launch. The queue (up to 100 events) is restored by `initialize()` and sent after it, when the app returns to the foreground, and after any event that sends successfully ([#14](https://github.com/LinkForty/mobile-sdk-ios/pull/14)).
+- Each event carries a `clientEventId`, assigned when it is tracked and the same on every retry. A server on `@linkforty/core` 1.36.0 or later stores a retried event once, including when an earlier attempt was stored but its reply was lost; an older server ignores the field ([#14](https://github.com/LinkForty/mobile-sdk-ios/pull/14)).
 
 ### Changed
-- `trackEvent`, `trackRevenue` and `trackScreenView` return normally when the event can't be sent now (no connection, or a 5xx) and is kept for later. They still throw for an invalid event, before `initialize()`, and when the server rejects the event (4xx).
+- `trackEvent`, `trackRevenue` and `trackScreenView` return normally when the event can't be sent now (no connection, or a 5xx) and is kept for later. They still throw for an invalid event, before `initialize()`, and when the server rejects the event (4xx) ([#14](https://github.com/LinkForty/mobile-sdk-ios/pull/14)).
 
 ## [1.5.0] - 2026-10-20
 ### Fixed
