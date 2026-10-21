@@ -8,28 +8,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+## [1.5.0] - 2026-10-20
 ### Fixed
 - The install is reported once per installation. `initialize()` previously reported an install on every launch, so each launch within the attribution window recorded a new install matched to the same click, and the deferred deep link was delivered again. Once an install ID is stored, `initialize()` now returns the cached attribution without a request, and `onDeferredDeepLink` fires only on the launch that reported the install. The attribution stays available from `getInstallData()` ([#9](https://github.com/LinkForty/mobile-sdk-ios/pull/9)).
 - `LinkForty.shared.isFirstLaunch()` can be called before `initialize()` and stays true for the whole first launch. It previously returned `true` before initialization whatever the stored state, and `false` as soon as `initialize()` had reported the install ([#9](https://github.com/LinkForty/mobile-sdk-ios/pull/9)).
-- `trackEvent`, `trackRevenue` and `trackScreenView` succeed when the server stores the event. The SDK expected a `success` field the event endpoint has never sent, so every call threw a decoding error and queued an event the server had already stored, and each `flushEvents()` sent the queue again.
-- `flushEvents()` sends each queued event once, in order, and returns when they are sent. Events stay queued only after a network error or a 5xx; an event the server rejects (4xx) is dropped instead of being retried on every flush.
-- Network errors that can succeed on another attempt (timeout, no connection, host unreachable, DNS failure) are retried with the same backoff as 5xx responses. A cancelled task is no longer reported as a network error.
-- A failed `initialize()` (for example, offline on first launch) leaves the SDK uninitialized, so `initialize()` can be called again in the same session. It previously stayed half-initialized: a retry threw `alreadyInitialized` and events threw `notInitialized` until the app was restarted.
-- `LinkFortyConfig.attributionWindowHours` is sent with the install. `initialize(config:attributionWindowHours:)` used its own default of 168 hours whatever the config said; the parameter now defaults to the config's value.
-- `onDeferredDeepLink` and `onDeepLink` callbacks registered before `initialize()` are kept. They were silently discarded.
-- A link passed to `handleDeepLink(url:)` before `initialize()` has configured the SDK, as when a Universal Link launches the app, is held and resolved once it has. It was discarded.
-- Deep link parameters that aren't strings (numbers, booleans, objects) are delivered in their string form. One such parameter made the whole deep link fail to decode: an attributed install delivered no deferred deep link, and a direct open fell back to the local URL parse without `linkId` or `deepLinkPath`.
-- `DeepLinkData.clickedAt` is set: timestamps with fractional seconds, which the server sends, are parsed.
-- `clearData()` keeps the app's registered callbacks.
-- `createLink` with a `templateId` returns the server's short URL when the server provides one, so it carries the link's own domain.
-- `LinkFortyConfig.debug` turns on the SDK's logging.
-- `createLink` with a `templateId` records the external user ID. It posted to `/api/links`, which ignores `externalUserId`, so the link had no user and wasn't deduplicated per user. Every `createLink` now posts to `/api/sdk/v1/links`, which accepts `templateId`, and falls back to `/api/links` only when the server doesn't have the SDK endpoint (404).
+- `trackEvent`, `trackRevenue` and `trackScreenView` succeed when the server stores the event. The SDK expected a `success` field the event endpoint has never sent, so every call threw a decoding error and queued an event the server had already stored, and each `flushEvents()` sent the queue again ([#10](https://github.com/LinkForty/mobile-sdk-ios/pull/10)).
+- `flushEvents()` sends each queued event once, in order, and returns when they are sent. Events stay queued only after a network error or a 5xx; an event the server rejects (4xx) is dropped instead of being retried on every flush ([#10](https://github.com/LinkForty/mobile-sdk-ios/pull/10)).
+- Network errors that can succeed on another attempt (timeout, no connection, host unreachable, DNS failure) are retried with the same backoff as 5xx responses. A cancelled task is no longer reported as a network error ([#10](https://github.com/LinkForty/mobile-sdk-ios/pull/10)).
+- A failed `initialize()` (for example, offline on first launch) leaves the SDK uninitialized, so `initialize()` can be called again in the same session. It previously stayed half-initialized: a retry threw `alreadyInitialized` and events threw `notInitialized` until the app was restarted ([#10](https://github.com/LinkForty/mobile-sdk-ios/pull/10)).
+- `LinkFortyConfig.attributionWindowHours` is sent with the install. `initialize(config:attributionWindowHours:)` used its own default of 168 hours whatever the config said; the parameter now defaults to the config's value ([#10](https://github.com/LinkForty/mobile-sdk-ios/pull/10)).
+- `onDeferredDeepLink` and `onDeepLink` callbacks registered before `initialize()` are kept. They were silently discarded ([#10](https://github.com/LinkForty/mobile-sdk-ios/pull/10)).
+- A link passed to `handleDeepLink(url:)` before `initialize()` has configured the SDK, as when a Universal Link launches the app, is held and resolved once it has. It was discarded ([#10](https://github.com/LinkForty/mobile-sdk-ios/pull/10)).
+- Deep link parameters that aren't strings (numbers, booleans, objects) are delivered in their string form. One such parameter made the whole deep link fail to decode: an attributed install delivered no deferred deep link, and a direct open fell back to the local URL parse without `linkId` or `deepLinkPath` ([#10](https://github.com/LinkForty/mobile-sdk-ios/pull/10)).
+- `DeepLinkData.clickedAt` is set: timestamps with fractional seconds, which the server sends, are parsed ([#10](https://github.com/LinkForty/mobile-sdk-ios/pull/10)).
+- `clearData()` keeps the app's registered callbacks ([#10](https://github.com/LinkForty/mobile-sdk-ios/pull/10)).
+- `createLink` with a `templateId` returns the server's short URL when the server provides one, so it carries the link's own domain ([#10](https://github.com/LinkForty/mobile-sdk-ios/pull/10)).
+- `LinkFortyConfig.debug` turns on the SDK's logging ([#10](https://github.com/LinkForty/mobile-sdk-ios/pull/10)).
+- `createLink` with a `templateId` records the external user ID. It posted to `/api/links`, which ignores `externalUserId`, so the link had no user and wasn't deduplicated per user. Every `createLink` now posts to `/api/sdk/v1/links`, which accepts `templateId`, and falls back to `/api/links` only when the server doesn't have the SDK endpoint (404) ([#11](https://github.com/LinkForty/mobile-sdk-ios/pull/11)).
 
 ### Changed
-- `onDeferredDeepLink` is called with `nil` on the launch that reports an organic (unattributed) install, as documented. It was previously called only for attributed installs, so code in an app's organic branch never ran; that code now runs once, on the first launch.
+- `onDeferredDeepLink` is called with `nil` on the launch that reports an organic (unattributed) install, as documented. It was previously called only for attributed installs, so code in an app's organic branch never ran; that code now runs once, on the first launch ([#10](https://github.com/LinkForty/mobile-sdk-ios/pull/10)).
 
 ### Added
-- An end-to-end test app and driver under `E2E/` that run an app on a simulator against a LinkForty server and check what the SDK delivers and what the server stores. See `E2E/README.md`.
+- An end-to-end test app and driver under `E2E/` that run an app on a simulator against a LinkForty server and check what the SDK delivers and what the server stores. See `E2E/README.md` ([#10](https://github.com/LinkForty/mobile-sdk-ios/pull/10)).
 
 ## [1.4.2] - 2026-10-19
 ### Fixed
