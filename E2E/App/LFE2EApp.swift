@@ -218,7 +218,8 @@ final class Harness {
     /// Hands a URL to the SDK, as an app's `onOpenURL` does.
     func open(_ url: URL) {
         log("openURL", ["url": url.absoluteString])
-        LinkForty.shared.handleDeepLink(url: url)
+        let handled = LinkForty.shared.handleDeepLink(url: url)
+        log("handleResult", ["url": url.absoluteString, "handled": handled])
     }
 
     private func run(_ command: String, _ query: [String: String]) async {
@@ -226,7 +227,7 @@ final class Harness {
         case "handle":
             // Delivers a URL to the SDK as a Universal Link would.
             guard let target = query["url"].flatMap(URL.init(string:)) else { return }
-            LinkForty.shared.handleDeepLink(url: target)
+            open(target)
 
         case "track":
             let count = Int(query["count"] ?? "1") ?? 1
