@@ -134,6 +134,11 @@ final class NetworkManager {
         // sdkVersion fields in the install/event payloads) for backend diagnostics.
         request.setValue("\(SDKInfo.name)/\(SDKInfo.version)", forHTTPHeaderField: "X-LinkForty-SDK")
 
+        // Name the app, so the server answers with its own workspace's links
+        if let appToken = config.appToken {
+            request.setValue(appToken, forHTTPHeaderField: "X-LinkForty-App-Token")
+        }
+
         // Add API key if present
         if let apiKey = config.apiKey {
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")

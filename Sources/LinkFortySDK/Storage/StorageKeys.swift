@@ -27,4 +27,7 @@ enum StorageKeys {
 
     /// Events waiting to be sent
     static let eventQueue = "\(prefix).eventQueue"
+
+    /// Hosts the workspace serves links on (JSON array)
+    static let linkDomains = "\(prefix).linkDomains"
 }

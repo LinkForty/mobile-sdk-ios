@@ -27,6 +27,8 @@ public final class LinkForty {
     private var attributionContext: AttributionContext?
     private var eventTracker: EventTracker?
 
+    private var linkDomains: LinkDomains? // the workspace's link hosts
+
     /// Created up front so callbacks registered before `initialize()` are kept;
     /// `initialize()` configures it.
     private var deepLinkHandler = DeepLinkHandler()
@@ -108,8 +110,10 @@ public final class LinkForty {
 
         _ = isFirstLaunch()
 
-        let handler = initQueue.sync { deepLinkHandler }
-        pendingDeepLinks.forEach { handler.handleDeepLink($0) }
+        let (handler, domains, network) = initQueue.sync { (deepLinkHandler, linkDomains, networkManager) }
+        if let domains, let network {
+            domains.start(appToken: config.appToken, network: network, held: pendingDeepLinks, handler: handler)
+        }
 
         // Only the launch that reports the install delivers a deferred deep link;
         // later launches get the cached attribution without a callback.
@@ -184,6 +188,8 @@ public final class LinkForty {
             eventQueue: EventQueue(store: userDefaults)
         )
 
+        self.linkDomains = LinkDomains(store: userDefaults, baseURL: config.baseURL)
+
         deepLinkHandler.configure(
             networkManager: networkManager,
             fingerprintCollector: fingerprintCollector,
@@ -207,25 +213,26 @@ public final class LinkForty {
 
     // MARK: - Deep Linking
 
-    /// Handles a deep link URL (Universal Link or custom scheme)
-    ///
-    /// A link handed over before `initialize()`, as when it cold-starts the app,
-    /// is held and resolved once `initialize()` configures the SDK.
+    /// Handles a deep link URL (Universal Link or custom scheme). Pass every URL
+    /// the app receives: only a LinkForty link is resolved on the server (see
+    /// `LinkDomains.shouldLookUp`); any other reaches `onDeepLink` as a local
+    /// parse. A link handed over before `initialize()` is held until it runs.
     /// - Parameter url: Deep link URL to handle
-    public func handleDeepLink(url: URL) {
-        let handler: DeepLinkHandler? = initQueue.sync {
-            guard isInitialized else {
-                pendingDeepLinks.append(url)
-                return nil
-            }
-            return deepLinkHandler
+    /// - Returns: Whether the URL is resolved as a LinkForty link (for a held
+    ///   link, whether it is an `http(s)` URL)
+    @discardableResult
+    public func handleDeepLink(url: URL) -> Bool {
+        let state: (DeepLinkHandler, LinkDomains?)? = initQueue.sync {
+            guard isInitialized else { pendingDeepLinks.append(url); return nil }
+            return (deepLinkHandler, linkDomains)
         }
-
-        guard let handler else {
+        guard let (handler, domains) = state else {
             LinkFortyLogger.log("Deep link held until initialize(): \(url.absoluteString)")
-            return
+            return ["http", "https"].contains(url.scheme?.lowercased() ?? "")
         }
-        handler.handleDeepLink(url)
+        let lookUp = domains?.shouldLookUp(url) ?? true
+        handler.handleDeepLink(url, lookUp: lookUp)
+        return lookUp
     }
 
     /// Registers a callback for deferred deep links, called once on the launch
@@ -476,6 +483,7 @@ public final class LinkForty {
             attributionManager = nil
             attributionContext = nil
             eventTracker = nil
+            linkDomains = nil
             deepLinkHandler = DeepLinkHandler()
             pendingDeepLinks = []
             externalUserId = nil

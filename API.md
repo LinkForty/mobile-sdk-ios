@@ -68,8 +68,11 @@ print("Attributed: \(response.attributed)")
 Handles a deep link URL (Universal Link or custom scheme).
 
 ```swift
-func handleDeepLink(url: URL)
+@discardableResult
+func handleDeepLink(url: URL) -> Bool
 ```
+
+Pass every URL the app receives. An `http(s)` URL on one of your workspace's link hosts (or the base URL's host) is resolved on the server, and `true` is returned. Any other URL, custom schemes included, is not sent anywhere: it reaches `onDeepLink` callbacks as a local parse, and `false` is returned. The SDK learns the link hosts from the server when `appToken` is set; until then, and without an `appToken`, every `http(s)` URL is resolved.
 
 **Parameters:**
 - `url`: The deep link URL to handle
@@ -452,7 +455,7 @@ init(
 **Parameters:**
 - `baseURL`: Backend URL (must be HTTPS except localhost)
 - `apiKey`: API key (optional for self-hosted)
-- `appToken`: Public workspace token (LinkForty Cloud only). Recommended — required for organic installs (App Store discovery, social mentions, etc.) to be attributed to your workspace. Find it in the dashboard under Workspace Settings → App Token. Format: `at_<32 hex chars>`. Safe to ship in your app bundle.
+- `appToken`: Public workspace token (LinkForty Cloud only). Recommended — required for organic installs (App Store discovery, social mentions, etc.) to be attributed to your workspace. It is sent with every request, so link lookups answer only with your workspace's links, and it lets the SDK learn your link hosts. Find it in the dashboard under Workspace Settings → App Token. Format: `at_<32 hex chars>`. Safe to ship in your app bundle.
 - `debug`: Enable debug logging (default: false)
 - `attributionWindowHours`: Attribution window in hours (default: 168 = 7 days, max: 2160 = 90 days)
 
