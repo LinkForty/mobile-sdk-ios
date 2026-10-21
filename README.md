@@ -147,7 +147,7 @@ LinkForty.shared.onDeepLink { url, deepLinkData in
 }
 ```
 
-> **Server-side resolution:** When the SDK is initialized, deep links are automatically resolved via the server to provide enriched data including `deepLinkPath`, `appScheme`, and `linkId`. If the server is unreachable, the SDK falls back to local URL parsing.
+> **Server-side resolution:** Pass every URL the app receives to `handleDeepLink`. A link on one of your workspace's link hosts is resolved via the server to provide enriched data including `deepLinkPath`, `appScheme`, and `linkId`; any other URL, custom schemes included, reaches `onDeepLink` as a local parse without a request. If the server is unreachable, the SDK falls back to local URL parsing.
 
 ### 4. Track Events
 

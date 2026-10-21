@@ -120,9 +120,12 @@ final class DeepLinkHandler {
         }
     }
 
-    /// Handles a deep link URL with server-side resolution
-    /// - Parameter url: The URL that opened the app
-    func handleDeepLink(_ url: URL) {
+    /// Handles a deep link URL, resolving it on the server when `lookUp` is true
+    /// and delivering the local parse otherwise
+    /// - Parameters:
+    ///   - url: The URL that opened the app
+    ///   - lookUp: Whether the URL is a LinkForty link to resolve on the server
+    func handleDeepLink(_ url: URL, lookUp: Bool = true) {
         queue.async { [weak self] in
             guard let self = self else { return }
 
@@ -132,13 +135,13 @@ final class DeepLinkHandler {
             let localData = URLParser.parseDeepLink(from: url)
 
             // Attempt server-side resolution if configured
-            if self.networkManager != nil && self.fingerprintCollector != nil {
+            if lookUp && self.networkManager != nil && self.fingerprintCollector != nil {
                 Task {
                     let resolvedData = await self.resolveURL(url, fallback: localData)
                     self.deliverDeepLink(url: url, data: resolvedData)
                 }
             } else {
-                // No network manager — use local parsing only
+                // Not a LinkForty link, or no network manager: local parsing only
                 self.deliverDeepLink(url: url, data: localData)
             }
         }

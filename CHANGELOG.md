@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+### Added
+- With an `appToken`, the SDK learns the hosts your workspace serves links on (its link host, its verified custom domains and the platform short-link host) from `GET /api/sdk/v1/link-domains`, refreshes them on each launch, and saves them for the next.
+- Every request carries the app token in `X-LinkForty-App-Token`. A server on `@linkforty/core` with app-scoped resolution answers a link lookup only with your workspace's links, so a short code another workspace owns is not resolved for your app.
+- `handleDeepLink(url:)` returns whether the URL is resolved as a LinkForty link (`@discardableResult`).
+
+### Changed
+- `handleDeepLink(url:)` resolves only `http(s)` URLs on your workspace's link hosts (or the base URL's host). Other URLs, custom schemes included, are no longer sent to the server: they reach `onDeepLink` as a local parse. Until the link hosts are known (no `appToken`, or a server without the endpoint), every `http(s)` URL is resolved as before. A link handed over before `initialize()` waits for the first host list, at most 3 seconds, on a launch with no saved list.
 
 ## [1.6.0] - 2026-10-21
 ### Added

@@ -262,6 +262,55 @@ final class LaunchFlowTests: XCTestCase {
         XCTAssertFalse(session.requests.contains { $0.url?.path == "/api/links" })
     }
 
+    private func initializeWithAppToken(domains: [String]) async throws {
+        endLaunch()
+        session.dataByPath["/api/sdk/v1/link-domains"] = try JSONEncoder().encode(["domains": domains])
+        _ = try await LinkForty.shared.initialize(
+            config: LinkFortyConfig(baseURL: URL(string: "https://api.example.com")!, appToken: "at_123")
+        )
+        try await Task.sleep(nanoseconds: 300_000_000)
+    }
+
+    private var resolveRequests: [URLRequest] {
+        session.requests.filter { $0.url?.path.hasPrefix("/api/sdk/v1/resolve") == true }
+    }
+
+    func testOnlyURLsOnTheWorkspaceLinkHostsAreLookedUp() async throws {
+        try await initializeWithAppToken(domains: ["links.acme.com"])
+        var opened: [URL] = []
+        LinkForty.shared.onDeepLink { url, _ in opened.append(url) }
+
+        let other = LinkForty.shared.handleDeepLink(url: URL(string: "https://acme.com/settings/abc")!)
+        let scheme = LinkForty.shared.handleDeepLink(url: URL(string: "myapp://product/abc")!)
+        try await Task.sleep(nanoseconds: 300_000_000)
+        XCTAssertFalse(other)
+        XCTAssertFalse(scheme)
+        XCTAssertTrue(resolveRequests.isEmpty, "neither is looked up")
+        XCTAssertEqual(opened.count, 2, "both still reach onDeepLink")
+
+        let ours = LinkForty.shared.handleDeepLink(url: URL(string: "https://links.acme.com/abc")!)
+        try await Task.sleep(nanoseconds: 300_000_000)
+        XCTAssertTrue(ours)
+        XCTAssertEqual(resolveRequests.count, 1)
+        XCTAssertEqual(resolveRequests.first?.value(forHTTPHeaderField: "X-LinkForty-App-Token"), "at_123")
+    }
+
+    func testALinkHeldBeforeInitializeIsDecidedOnceTheHostsAreKnown() async throws {
+        endLaunch()
+        session.dataByPath["/api/sdk/v1/link-domains"] = try JSONEncoder().encode(["domains": ["links.acme.com"]])
+        var opened: [URL] = []
+        LinkForty.shared.onDeepLink { url, _ in opened.append(url) }
+
+        LinkForty.shared.handleDeepLink(url: URL(string: "https://acme.com/settings/abc")!)
+        _ = try await LinkForty.shared.initialize(
+            config: LinkFortyConfig(baseURL: URL(string: "https://api.example.com")!, appToken: "at_123")
+        )
+        try await Task.sleep(nanoseconds: 800_000_000)
+
+        XCTAssertTrue(resolveRequests.isEmpty)
+        XCTAssertEqual(opened.count, 1)
+    }
+
     func testIsFirstLaunchIsFalseBeforeInitializeOnLaterLaunch() async throws {
         _ = try await launch()
 
