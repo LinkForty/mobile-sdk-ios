@@ -384,15 +384,26 @@ class MockURLSession: URLSessionProtocol {
     var mockResponse: URLResponse?
     var mockError: Error?
     var lastRequest: URLRequest?
+    var requests: [URLRequest] = []
+    /// Thrown, in order, by the next requests before any other response.
+    var queuedErrors: [Error] = []
+    /// Response bodies by URL path, used instead of `mockData` when present.
+    var dataByPath: [String: Data] = [:]
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
         lastRequest = request
+        requests.append(request)
+
+        if !queuedErrors.isEmpty {
+            throw queuedErrors.removeFirst()
+        }
 
         if let error = mockError {
             throw error
         }
 
-        guard let data = mockData, let response = mockResponse else {
+        let body = request.url.flatMap { dataByPath[$0.path] } ?? mockData
+        guard let data = body, let response = mockResponse else {
             throw NSError(domain: "MockURLSession", code: -1, userInfo: [
                 NSLocalizedDescriptionKey: "No mock data or response configured"
             ])

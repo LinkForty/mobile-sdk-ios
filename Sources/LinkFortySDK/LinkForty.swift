@@ -23,7 +23,14 @@ public final class LinkForty {
     private var attributionManager: AttributionManager?
     private var attributionContext: AttributionContext?
     private var eventTracker: EventTracker?
-    private var deepLinkHandler: DeepLinkHandler?
+
+    /// Created up front so callbacks registered before `initialize()` are kept;
+    /// `initialize()` configures it.
+    private var deepLinkHandler = DeepLinkHandler()
+
+    /// Links handed to `handleDeepLink(url:)` before `initialize()`, as when a
+    /// link cold-starts the app. Resolved once the SDK is configured.
+    private var pendingDeepLinks: [URL] = []
 
     private var externalUserId: String?
     private let initQueue = DispatchQueue(label: "com.linkforty.sdk.init", qos: .userInitiated)
@@ -43,19 +50,25 @@ public final class LinkForty {
 
     /// Initializes the SDK with configuration
     /// - Parameters:
+    ///
+    /// If the install can't be reported (for example, the device is offline),
+    /// this throws and leaves the SDK uninitialized, so it can be called again.
+    ///
+    /// - Parameters:
     ///   - config: SDK configuration
-    ///   - attributionWindowHours: Attribution window in hours (default: 168 = 7 days)
+    ///   - attributionWindowHours: Attribution window in hours. Defaults to
+    ///     `config.attributionWindowHours`.
     ///   - deviceId: Optional device identifier for attribution
     /// - Returns: InstallResponse with attribution data
     /// - Throws: LinkFortyError if initialization fails
     @discardableResult
     public func initialize(
         config: LinkFortyConfig,
-        attributionWindowHours: Int = 168,
+        attributionWindowHours: Int? = nil,
         deviceId: String? = nil
     ) async throws -> InstallResponse {
         // Synchronize access to initialization state
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+        let pendingDeepLinks: [URL] = try await withCheckedThrowingContinuation { continuation in
             initQueue.async {
                 // Check if already initialized
                 guard !self.isInitialized else {
@@ -73,6 +86,7 @@ public final class LinkForty {
 
                 // Store configuration
                 self.config = config
+                LinkFortyLogger.isDebugEnabled = config.debug
 
                 // Create and wire the managers
                 self.setUpManagers(config: config)
@@ -80,26 +94,37 @@ public final class LinkForty {
                 // Mark as initialized
                 self.isInitialized = true
 
-                continuation.resume()
+                let pending = self.pendingDeepLinks
+                self.pendingDeepLinks = []
+                continuation.resume(returning: pending)
             }
         }
 
         _ = isFirstLaunch()
+
+        let handler = initQueue.sync { deepLinkHandler }
+        pendingDeepLinks.forEach { handler.handleDeepLink($0) }
 
         // Only the launch that reports the install delivers a deferred deep link;
         // later launches get the cached attribution without a callback.
         let isNewInstall = attributionManager!.getInstallId() == nil
 
         // Report install and get attribution data (outside the serial queue)
-        let response = try await attributionManager!.reportInstall(
-            attributionWindowHours: attributionWindowHours,
-            deviceId: deviceId,
-            appToken: config.appToken
-        )
+        let response: InstallResponse
+        do {
+            response = try await attributionManager!.reportInstall(
+                attributionWindowHours: attributionWindowHours ?? config.attributionWindowHours,
+                deviceId: deviceId,
+                appToken: config.appToken
+            )
+        } catch {
+            tearDownManagers()
+            throw error
+        }
 
-        // If attributed, notify deferred deep link handler
-        if isNewInstall, response.attributed, let deepLinkData = response.deepLinkData {
-            deepLinkHandler?.deliverDeferredDeepLink(deepLinkData)
+        // The install's launch delivers its deep link, or nil for an organic install.
+        if isNewInstall {
+            handler.deliverDeferredDeepLink(response.attributed ? response.deepLinkData : nil)
         }
 
         LinkFortyLogger.log("SDK initialized successfully (attributed: \(response.attributed))")
@@ -130,49 +155,63 @@ public final class LinkForty {
             attributionContext: attributionContext
         )
 
-        let handler = DeepLinkHandler()
-        handler.configure(
+        deepLinkHandler.configure(
             networkManager: networkManager,
             fingerprintCollector: fingerprintCollector,
             baseURL: config.baseURL,
             attributionContext: attributionContext
         )
-        self.deepLinkHandler = handler
+    }
+
+    /// Returns the SDK to its uninitialized state after a failed install report,
+    /// keeping registered callbacks, so `initialize()` can be called again.
+    private func tearDownManagers() {
+        initQueue.sync {
+            config = nil
+            networkManager = nil
+            attributionManager = nil
+            attributionContext = nil
+            eventTracker = nil
+            isInitialized = false
+        }
     }
 
     // MARK: - Deep Linking
 
     /// Handles a deep link URL (Universal Link or custom scheme)
+    ///
+    /// A link handed over before `initialize()`, as when it cold-starts the app,
+    /// is held and resolved once `initialize()` configures the SDK.
     /// - Parameter url: Deep link URL to handle
     public func handleDeepLink(url: URL) {
-        guard isInitialized else {
-            LinkFortyLogger.log("SDK not initialized. Call initialize() first.")
-            return
+        let handler: DeepLinkHandler? = initQueue.sync {
+            guard isInitialized else {
+                pendingDeepLinks.append(url)
+                return nil
+            }
+            return deepLinkHandler
         }
 
-        deepLinkHandler?.handleDeepLink(url)
+        guard let handler else {
+            LinkFortyLogger.log("Deep link held until initialize(): \(url.absoluteString)")
+            return
+        }
+        handler.handleDeepLink(url)
     }
 
-    /// Registers a callback for deferred deep links (triggered on first launch after attributed install)
+    /// Registers a callback for deferred deep links, called once on the launch
+    /// that reports the install: with the link's data, or nil for an organic install.
+    /// Can be registered before or after `initialize()`.
     /// - Parameter callback: Callback to invoke with deep link data
     public func onDeferredDeepLink(_ callback: @escaping DeferredDeepLinkCallback) {
-        guard isInitialized else {
-            LinkFortyLogger.log("SDK not initialized. Call initialize() first.")
-            return
-        }
-
-        deepLinkHandler?.onDeferredDeepLink(callback)
+        initQueue.sync { deepLinkHandler }.onDeferredDeepLink(callback)
     }
 
-    /// Registers a callback for deep links (triggered when app opens from link)
+    /// Registers a callback for deep links (triggered when app opens from link).
+    /// Can be registered before or after `initialize()`.
     /// - Parameter callback: Callback to invoke with deep link data
     public func onDeepLink(_ callback: @escaping DeepLinkCallback) {
-        guard isInitialized else {
-            LinkFortyLogger.log("SDK not initialized. Call initialize() first.")
-            return
-        }
-
-        deepLinkHandler?.onDeepLink(callback)
+        initQueue.sync { deepLinkHandler }.onDeepLink(callback)
     }
 
     // MARK: - User Identity
@@ -326,10 +365,11 @@ public final class LinkForty {
                 body: resolvedOptions
             )
 
-            // Construct URL from parts
+            // The server's short URL carries the link's own domain; older
+            // servers don't return one, so fall back to building it.
             let templateSlug = resolvedOptions.templateSlug ?? ""
             let pathSegment = templateSlug.isEmpty ? response.shortCode : "\(templateSlug)/\(response.shortCode)"
-            let url = config.baseURL.appendingPathComponent(pathSegment).absoluteString
+            let url = response.shortUrl ?? config.baseURL.appendingPathComponent(pathSegment).absoluteString
 
             return CreateLinkResult(
                 url: url,
@@ -386,12 +426,12 @@ public final class LinkForty {
 
     // MARK: - Data Management
 
-    /// Clears all stored SDK data
+    /// Clears all stored SDK data. Registered callbacks are kept.
     public func clearData() {
         attributionManager?.clearData()
         attributionContext?.clear()
         eventTracker?.clearQueue()
-        deepLinkHandler?.clearCallbacks()
+        initQueue.sync { deepLinkHandler }.clearDeferredDeepLink()
         externalUserId = nil
         initQueue.sync { firstLaunchThisSession = nil }
 
@@ -407,7 +447,8 @@ public final class LinkForty {
             attributionManager = nil
             attributionContext = nil
             eventTracker = nil
-            deepLinkHandler = nil
+            deepLinkHandler = DeepLinkHandler()
+            pendingDeepLinks = []
             externalUserId = nil
             isInitialized = false
             firstLaunchThisSession = nil

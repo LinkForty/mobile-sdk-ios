@@ -8,8 +8,17 @@
 
 import Foundation
 
-/// Response from event tracking endpoint
+/// Response from the event tracking endpoint. A 2xx status means the event was
+/// stored; the fields are informational.
 struct EventResponse: Codable {
-    /// Whether the event was successfully tracked
-    let success: Bool
+    /// Server-assigned event ID
+    let eventId: String?
+
+    /// Whether the server accepted the event
+    let acknowledged: Bool?
+
+    init(eventId: String? = nil, acknowledged: Bool? = true) {
+        self.eventId = eventId
+        self.acknowledged = acknowledged
+    }
 }

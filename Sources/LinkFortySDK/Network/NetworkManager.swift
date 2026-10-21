@@ -62,20 +62,13 @@ final class NetworkManager {
                     body: body,
                     headers: headers
                 )
-            } catch let error as LinkFortyError {
-                lastError = error
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                let failure = error as? LinkFortyError ?? LinkFortyError.networkError(error)
+                lastError = failure
 
-                // Don't retry on client errors (4xx) or invalid configuration
-                switch error {
-                case .invalidResponse(let statusCode, _):
-                    if let code = statusCode, (400..<500).contains(code) {
-                        throw error
-                    }
-                case .invalidConfiguration, .decodingError, .encodingError:
-                    throw error
-                default:
-                    break
-                }
+                guard Self.shouldRetry(error) else { throw failure }
 
                 // Exponential backoff: 1s, 2s, 4s
                 if attempt < maxRetries {
@@ -83,13 +76,37 @@ final class NetworkManager {
                     LinkFortyLogger.log("Request failed (attempt \(attempt)/\(maxRetries)), retrying in \(delay)s...")
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 }
-            } catch {
-                lastError = error
-                throw LinkFortyError.networkError(error)
             }
         }
 
         throw lastError ?? LinkFortyError.networkError(NSError(domain: "LinkForty", code: -1))
+    }
+
+    /// Server errors (5xx) and transient connection failures are retried; client
+    /// errors (4xx), invalid configuration and coding failures are not.
+    static func shouldRetry(_ error: Error) -> Bool {
+        switch error {
+        case LinkFortyError.invalidResponse(let statusCode, _):
+            return !(statusCode.map { (400..<500).contains($0) } ?? false)
+        case LinkFortyError.invalidConfiguration, LinkFortyError.decodingError, LinkFortyError.encodingError:
+            return false
+        case is LinkFortyError:
+            return true
+        default:
+            return isTransient(error)
+        }
+    }
+
+    /// Connection failures that may succeed on another attempt.
+    static func isTransient(_ error: Error) -> Bool {
+        guard let urlError = error as? URLError else { return false }
+        switch urlError.code {
+        case .timedOut, .cannotConnectToHost, .networkConnectionLost, .notConnectedToInternet,
+             .cannotFindHost, .dnsLookupFailed:
+            return true
+        default:
+            return false
+        }
     }
 
     // MARK: - Private Methods

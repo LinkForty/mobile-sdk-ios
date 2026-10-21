@@ -100,7 +100,7 @@ final class LinkFortyTests: XCTestCase {
         // Act
         LinkForty.shared.onDeferredDeepLink(callback)
 
-        // Assert - Callback should not be registered before initialization
+        // Assert - Registering doesn't invoke the callback; it waits for an install
         XCTAssertFalse(callbackInvoked)
     }
 
@@ -114,7 +114,7 @@ final class LinkFortyTests: XCTestCase {
         // Act
         LinkForty.shared.onDeepLink(callback)
 
-        // Assert - Callback should not be registered before initialization
+        // Assert - Registering doesn't invoke the callback; it waits for a link
         XCTAssertFalse(callbackInvoked)
     }
 

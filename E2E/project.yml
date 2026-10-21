@@ -1,0 +1,32 @@
+name: LFE2E
+options:
+  bundleIdPrefix: com.linkforty
+  deploymentTarget:
+    iOS: "16.0"
+packages:
+  LinkFortySDK:
+    path: ..
+targets:
+  LFE2E:
+    type: application
+    platform: iOS
+    sources: [App]
+    dependencies:
+      - package: LinkFortySDK
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.linkforty.e2e
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_CFBundleDisplayName: LF E2E
+        CODE_SIGNING_ALLOWED: NO
+        SWIFT_VERSION: "5.9"
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleURLTypes:
+          - CFBundleURLName: com.linkforty.e2e.links
+            CFBundleURLSchemes: [lfe2e]
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        UILaunchScreen: {}
