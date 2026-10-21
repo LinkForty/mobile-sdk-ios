@@ -8,11 +8,11 @@ documented behavior in the README, `API.md` and the SDK specification.
 
 | Scenario | Checks |
 |---|---|
-| Attributed install | Click → install → deferred deep link once, with parameters, path and `clickedAt`; three relaunches report no install and deliver nothing; one install stored; the configured attribution window is sent |
+| Attributed install | Click → install → deferred deep link once, with parameters, path and `clickedAt`; three relaunches report no install and deliver nothing; the browser click is stored as human; one install stored; the configured attribution window is sent |
 | Organic install | `onDeferredDeepLink(nil)` once (needs `LF_E2E_ORGANIC_APP_TOKEN`) |
 | Callbacks before `initialize` | They receive the deferred deep link |
-| Link while running | `onDeepLink` once, resolved by the server, stored and URL parameters merged |
-| Link that launches the app | `onDeepLink` once |
+| Link while running | `onDeepLink` once, resolved by the server, stored and URL parameters merged; stored as one human click |
+| Link that launches the app | `onDeepLink` once; stored as one human click |
 | Events | 4 tracked → 4 stored, nothing left queued |
 | Offline first launch | `initialize()` can be retried in the same session; one install stored |
 | Concurrent `initialize` | One install stored |
