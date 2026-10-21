@@ -106,6 +106,21 @@ LinkForty.shared.onDeferredDeepLink { deepLinkData in
 }
 ```
 
+A deferred deep link also says how sure the match is: `confidenceScore` (0-100), `matchedFactors`, `attributionMethod` and `competingLinks`. `competingLinks` counts the other links that had a click from the same network and also reached the confidence threshold. At 0 nothing else was in contention; above 0, another device's tap may be what led to this install, so before acting on a sensitive link (a sign-in or a gift, say) treat the match as unverified, for example by asking the user to confirm:
+
+```swift
+LinkForty.shared.onDeferredDeepLink { deepLinkData in
+    guard let data = deepLinkData else { return }
+    if (data.competingLinks ?? 0) > 0 {
+        askUserToConfirm(data)   // another link was in contention
+    } else {
+        redeem(data)
+    }
+}
+```
+
+These fields are set only on a deferred deep link from a server that sends them; they are `nil` on a direct open.
+
 ### 3. Handle Direct Deep Links (Universal Links)
 
 First, enable Associated Domains in your Xcode project:

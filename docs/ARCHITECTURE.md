@@ -267,6 +267,10 @@ public struct DeepLinkData: Codable {
     let customParameters: [String: String]?
     let clickedAt: Date?
     let linkId: String?
+    let confidenceScore: Double?    // deferred deep link only
+    let matchedFactors: [String]?   // deferred deep link only
+    let attributionMethod: String?  // deferred deep link only
+    let competingLinks: Int?        // deferred deep link only
 }
 ```
 
@@ -289,6 +293,8 @@ struct InstallResponse: Codable {
     let confidenceScore: Double
     let matchedFactors: [String]
     let deepLinkData: DeepLinkData?
+    let attributionMethod: String?
+    let competingLinks: Int?
 }
 ```
 

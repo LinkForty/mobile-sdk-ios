@@ -40,6 +40,24 @@ public struct DeepLinkData: Codable, Equatable {
     /// The link ID from the backend
     public let linkId: String?
 
+    /// How confident the server is that this install came from the link's click (0-100).
+    /// Set on a deferred deep link; nil on a direct open.
+    public let confidenceScore: Double?
+
+    /// Which fingerprint factors matched the click. Set on a deferred deep link; nil on a direct open.
+    public let matchedFactors: [String]?
+
+    /// How the install was matched to the click (`"fingerprint"`). Set on a deferred deep link;
+    /// nil on a direct open and from servers that don't send it.
+    public let attributionMethod: String?
+
+    /// How many other links had a click from the install's network that also reached the
+    /// confidence threshold. 0 means no other link was in contention; above 0, another
+    /// device's tap may be what led to this install, so treat the match as unverified before
+    /// acting on a sensitive link (sign-in, gift), for example by asking the user to confirm.
+    /// Nil on a direct open and from servers that don't send it.
+    public let competingLinks: Int?
+
     // MARK: - Initialization
 
     /// Creates deep link data
@@ -53,7 +71,11 @@ public struct DeepLinkData: Codable, Equatable {
         deepLinkPath: String? = nil,
         appScheme: String? = nil,
         clickedAt: Date? = nil,
-        linkId: String? = nil
+        linkId: String? = nil,
+        confidenceScore: Double? = nil,
+        matchedFactors: [String]? = nil,
+        attributionMethod: String? = nil,
+        competingLinks: Int? = nil
     ) {
         self.shortCode = shortCode
         self.iosURL = iosURL
@@ -65,6 +87,10 @@ public struct DeepLinkData: Codable, Equatable {
         self.appScheme = appScheme
         self.clickedAt = clickedAt
         self.linkId = linkId
+        self.confidenceScore = confidenceScore
+        self.matchedFactors = matchedFactors
+        self.attributionMethod = attributionMethod
+        self.competingLinks = competingLinks
     }
 
     /// Returns a copy with the parameters carried on the opened URL merged in.
@@ -81,8 +107,8 @@ public struct DeepLinkData: Codable, Equatable {
     /// setup.
     ///
     /// Only `customParameters` is merged. `linkId`, `deepLinkPath`, `appScheme`,
-    /// the store URLs and `utmParameters` are server truth that a local parse
-    /// cannot know and must not overwrite.
+    /// the store URLs, `utmParameters` and the match fields are server truth that
+    /// a local parse cannot know and must not overwrite.
     func mergingURLParameters(_ fromURL: [String: String]?) -> DeepLinkData {
         guard let fromURL = fromURL, !fromURL.isEmpty else { return self }
 
@@ -101,7 +127,11 @@ public struct DeepLinkData: Codable, Equatable {
             deepLinkPath: deepLinkPath,
             appScheme: appScheme,
             clickedAt: clickedAt,
-            linkId: linkId
+            linkId: linkId,
+            confidenceScore: confidenceScore,
+            matchedFactors: matchedFactors,
+            attributionMethod: attributionMethod,
+            competingLinks: competingLinks
         )
     }
 
@@ -118,6 +148,10 @@ public struct DeepLinkData: Codable, Equatable {
         case appScheme
         case clickedAt
         case linkId
+        case confidenceScore
+        case matchedFactors
+        case attributionMethod
+        case competingLinks
     }
 
     public init(from decoder: Decoder) throws {
@@ -135,6 +169,13 @@ public struct DeepLinkData: Codable, Equatable {
         deepLinkPath = try container.decodeIfPresent(String.self, forKey: .deepLinkPath)
         appScheme = try container.decodeIfPresent(String.self, forKey: .appScheme)
         linkId = try container.decodeIfPresent(String.self, forKey: .linkId)
+
+        // Match details are informational: a missing field or one of an unexpected
+        // type leaves it nil rather than failing the deep link.
+        confidenceScore = try? container.decodeIfPresent(Double.self, forKey: .confidenceScore)
+        matchedFactors = try? container.decodeIfPresent([String].self, forKey: .matchedFactors)
+        attributionMethod = try? container.decodeIfPresent(String.self, forKey: .attributionMethod)
+        competingLinks = try? container.decodeIfPresent(Int.self, forKey: .competingLinks)
 
         // Decode date from ISO 8601 string, with or without fractional seconds
         if let dateString = try container.decodeIfPresent(String.self, forKey: .clickedAt) {
@@ -158,6 +199,10 @@ public struct DeepLinkData: Codable, Equatable {
         try container.encodeIfPresent(deepLinkPath, forKey: .deepLinkPath)
         try container.encodeIfPresent(appScheme, forKey: .appScheme)
         try container.encodeIfPresent(linkId, forKey: .linkId)
+        try container.encodeIfPresent(confidenceScore, forKey: .confidenceScore)
+        try container.encodeIfPresent(matchedFactors, forKey: .matchedFactors)
+        try container.encodeIfPresent(attributionMethod, forKey: .attributionMethod)
+        try container.encodeIfPresent(competingLinks, forKey: .competingLinks)
 
         // Encode date as ISO 8601 string
         if let clickedAt = clickedAt {
@@ -178,6 +223,7 @@ extension DeepLinkData: CustomStringConvertible {
             deepLinkPath: \(deepLinkPath ?? "nil"),
             appScheme: \(appScheme ?? "nil"),
             linkId: \(linkId ?? "nil"),
+            competingLinks: \(competingLinks.map(String.init) ?? "nil"),
             utmSource: \(utmParameters?.source ?? "nil")
         )
         """

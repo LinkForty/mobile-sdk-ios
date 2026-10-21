@@ -174,7 +174,7 @@ final class AttributionManagerTests: XCTestCase {
 
     func testReportInstallWithStoredInstallIdReturnsCachedAttributionWithoutRequest() async throws {
         // Arrange
-        let cachedData = DeepLinkData(shortCode: "abc123", iosURL: "myapp://welcome")
+        let cachedData = DeepLinkData(shortCode: "abc123", iosURL: "myapp://welcome", competingLinks: 2)
         mockStorageManager.mockInstallId = "stored-install-id"
         mockStorageManager.mockInstallData = cachedData
 
@@ -187,6 +187,11 @@ final class AttributionManagerTests: XCTestCase {
         XCTAssertTrue(response.attributed)
         XCTAssertEqual(response.deepLinkData?.shortCode, "abc123")
         XCTAssertNil(mockStorageManager.savedInstallId)
+        // No request was made, so the top-level match fields are unknown; the
+        // cached deep link keeps what the server sent with the install.
+        XCTAssertNil(response.attributionMethod)
+        XCTAssertNil(response.competingLinks)
+        XCTAssertEqual(response.deepLinkData?.competingLinks, 2)
     }
 
     func testReportInstallWithStoredInstallIdAndNoAttributionReturnsOrganic() async throws {

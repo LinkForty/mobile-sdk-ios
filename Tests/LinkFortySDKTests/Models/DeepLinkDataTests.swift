@@ -270,6 +270,64 @@ final class DeepLinkDataTests: XCTestCase {
         XCTAssertEqual(fmt.string(from: decoded.clickedAt!), fmt.string(from: original.clickedAt!))
     }
 
+    // MARK: - Match Certainty
+
+    func testDecodesMatchCertaintyFields() throws {
+        let json = """
+        {
+            "shortCode": "abc123",
+            "confidenceScore": 72.5,
+            "matchedFactors": ["ip", "userAgent"],
+            "attributionMethod": "fingerprint",
+            "competingLinks": 0
+        }
+        """
+
+        let data = try JSONDecoder().decode(DeepLinkData.self, from: Data(json.utf8))
+
+        XCTAssertEqual(data.confidenceScore, 72.5)
+        XCTAssertEqual(data.matchedFactors, ["ip", "userAgent"])
+        XCTAssertEqual(data.attributionMethod, "fingerprint")
+        XCTAssertEqual(data.competingLinks, 0)
+    }
+
+    /// A direct open (resolve) carries none of the match fields.
+    func testMatchCertaintyFieldsAreNilWhenAbsent() throws {
+        let json = #"{ "shortCode": "abc123", "deepLinkPath": "/product/1" }"#
+
+        let data = try JSONDecoder().decode(DeepLinkData.self, from: Data(json.utf8))
+
+        XCTAssertNil(data.confidenceScore)
+        XCTAssertNil(data.matchedFactors)
+        XCTAssertNil(data.attributionMethod)
+        XCTAssertNil(data.competingLinks)
+    }
+
+    func testRoundTripKeepsMatchCertaintyFields() throws {
+        let original = DeepLinkData(
+            shortCode: "abc123",
+            confidenceScore: 85,
+            matchedFactors: ["ip"],
+            attributionMethod: "fingerprint",
+            competingLinks: 3
+        )
+
+        let decoded = try JSONDecoder().decode(DeepLinkData.self, from: JSONEncoder().encode(original))
+
+        XCTAssertEqual(decoded, original)
+        XCTAssertEqual(decoded.competingLinks, 3)
+    }
+
+    func testEncodingOmitsNilMatchCertaintyFields() throws {
+        let encoded = try JSONEncoder().encode(DeepLinkData(shortCode: "abc123"))
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+
+        XCTAssertNil(json["confidenceScore"])
+        XCTAssertNil(json["matchedFactors"])
+        XCTAssertNil(json["attributionMethod"])
+        XCTAssertNil(json["competingLinks"])
+    }
+
     // MARK: - Merging URL parameters (direct open)
 
     func testMergeAddsURLParametersWhenLinkConfiguresNone() {
@@ -306,7 +364,11 @@ final class DeepLinkDataTests: XCTestCase {
             utmParameters: UTMParameters(source: "ig"),
             deepLinkPath: "/product/1",
             appScheme: "myapp",
-            linkId: "link-1"
+            linkId: "link-1",
+            confidenceScore: 85,
+            matchedFactors: ["ip"],
+            attributionMethod: "fingerprint",
+            competingLinks: 1
         )
         let merged = resolved.mergingURLParameters(["slug": "titanic"])
 
@@ -315,5 +377,9 @@ final class DeepLinkDataTests: XCTestCase {
         XCTAssertEqual(merged.appScheme, "myapp")
         XCTAssertEqual(merged.iosURL, "https://apps.apple.com/app/id1")
         XCTAssertEqual(merged.utmParameters?.source, "ig")
+        XCTAssertEqual(merged.confidenceScore, 85)
+        XCTAssertEqual(merged.matchedFactors, ["ip"])
+        XCTAssertEqual(merged.attributionMethod, "fingerprint")
+        XCTAssertEqual(merged.competingLinks, 1)
     }
 }
