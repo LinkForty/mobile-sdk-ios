@@ -19,5 +19,5 @@ enum SDKInfo {
     static let name = "ios"
 
     /// SDK release version, sent as `sdkVersion`. Keep in sync with the git tag.
-    static let version = "1.7.0"
+    static let version = "1.8.0"
 }
