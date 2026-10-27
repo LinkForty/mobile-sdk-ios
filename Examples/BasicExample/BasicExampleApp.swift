@@ -47,8 +47,13 @@ class AppState: ObservableObject {
             do {
                 // Configure SDK
                 let config = LinkFortyConfig(
+                    // The hosted service; your own server's URL if self-hosted
                     baseURL: URL(string: "https://api.linkforty.com")!,
-                    apiKey: "your-api-key-here",
+                    // Only for "Create Short Link" (createLink). It is a secret:
+                    // leave it nil unless the app creates links.
+                    apiKey: nil,
+                    // Your workspace's app token: required on the hosted service
+                    appToken: "at_your_app_token",
                     debug: true
                 )
 

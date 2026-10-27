@@ -2,7 +2,7 @@
 
 ## Overview
 
-The LinkForty iOS SDK is a native Swift framework for deep linking, install attribution, and conversion tracking. It provides seamless integration with both LinkForty Core (open source) and LinkForty Cloud (SaaS) backends.
+The LinkForty iOS SDK is a native Swift framework for deep linking, install attribution, and conversion tracking. It provides seamless integration with both self-hosted LinkForty Core (open source) and the hosted LinkForty service.
 
 ## Design Principles
 
@@ -410,8 +410,11 @@ struct EventRequest: Codable {
 ```
 
 ### Authentication
-- **Self-Hosted (Core)**: No authentication required
-- **Cloud**: Bearer token via `Authorization` header
+- **App token** (required on the hosted service; a self-hosted Core server doesn't need it): sent on every request when set
+  ```
+  X-LinkForty-App-Token: at_your_app_token
+  ```
+- **API key** (only for `createLink`): sent as a Bearer token on every request when set
   ```
   Authorization: Bearer your-api-key-here
   ```

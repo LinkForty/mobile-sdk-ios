@@ -79,20 +79,60 @@ Pass every URL the app receives. An `http(s)` URL on one of your workspace's lin
 
 A link handed over before `initialize()` has configured the SDK, as when a link launches the app, is held and resolved once it has.
 
+The SDK does not observe incoming links itself, so wire every entry point your app's lifecycle uses.
+
 **Example:**
 ```swift
-// In SwiftUI
+// SwiftUI: .onOpenURL receives Universal Links and custom-scheme URLs,
+// including the one that launched the app
 .onOpenURL { url in
     LinkForty.shared.handleDeepLink(url: url)
 }
 
-// In AppDelegate
-func application(_ application: UIApplication,
-                continue userActivity: NSUserActivity,
-                restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
-    if let url = userActivity.webpageURL {
+// UIKit with a SceneDelegate. The AppDelegate methods below are not
+// called in a scene-based app.
+
+// A link that launches the app
+func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+    // ... your window setup ...
+    if let url = connectionOptions.userActivities.first(where: { $0.activityType == NSUserActivityTypeBrowsingWeb })?.webpageURL {
         LinkForty.shared.handleDeepLink(url: url)
     }
+    if let url = connectionOptions.urlContexts.first?.url {
+        LinkForty.shared.handleDeepLink(url: url)
+    }
+}
+
+// A Universal Link while the app runs
+func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
+    guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+          let url = userActivity.webpageURL else { return }
+    LinkForty.shared.handleDeepLink(url: url)
+}
+
+// A custom-scheme URL while the app runs
+func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+    if let url = URLContexts.first?.url {
+        LinkForty.shared.handleDeepLink(url: url)
+    }
+}
+
+// UIKit without scenes (AppDelegate only)
+func application(_ application: UIApplication,
+                 continue userActivity: NSUserActivity,
+                 restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+    guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+          let url = userActivity.webpageURL else {
+        return false
+    }
+    LinkForty.shared.handleDeepLink(url: url)
+    return true
+}
+
+func application(_ app: UIApplication,
+                 open url: URL,
+                 options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+    LinkForty.shared.handleDeepLink(url: url)
     return true
 }
 ```

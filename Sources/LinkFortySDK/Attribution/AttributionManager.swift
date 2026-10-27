@@ -83,7 +83,7 @@ final class AttributionManager {
     /// - Parameters:
     ///   - attributionWindowHours: Attribution window in hours
     ///   - deviceId: Optional device ID (IDFA/IDFV) if user consented
-    ///   - appToken: Optional public workspace token (Cloud organic-install scoping)
+    ///   - appToken: Optional public workspace token that scopes the install to a workspace
     /// - Returns: Install response with attribution data
     /// - Throws: LinkFortyError on failure
     func reportInstall(

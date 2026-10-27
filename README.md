@@ -438,7 +438,7 @@ See [`E2E/README.md`](E2E/README.md) for the simulator tests that run the SDK ag
 
 This SDK requires a running LinkForty backend:
 - **LinkForty Core** (open source): Self-host for free
-- **LinkForty Cloud** (SaaS): Managed service with advanced features
+- **The hosted LinkForty service** ([linkforty.com](https://linkforty.com)): managed, nothing to run
 
 See: https://github.com/LinkForty/core
 
@@ -472,4 +472,4 @@ LinkForty iOS SDK is available under the MIT license. See [LICENSE](LICENSE) for
 ## Related Projects
 
 - [LinkForty Core](https://github.com/LinkForty/core) — open-source self-hosted deep linking engine
-- [LinkForty Cloud](https://linkforty.com) — hosted Core with additional features
+- [LinkForty](https://linkforty.com) — the hosted service, with a dashboard

@@ -20,30 +20,28 @@ A simple SwiftUI app demonstrating all features of the LinkForty iOS SDK.
 
 ### Prerequisites
 
-1. **LinkForty Backend**: You need a running LinkForty backend (Core or Cloud)
-2. **API Key**: Get your API key from your LinkForty dashboard (or omit for self-hosted Core)
+1. **LinkForty Backend**: the hosted service (`https://api.linkforty.com`) or your own self-hosted Core server
+2. **App Token**: on the hosted service, your workspace's app token (`at_…`), from the dashboard. A self-hosted Core server doesn't need one.
+3. **API Key** (optional): only for the "Create Short Link" button (`createLink`). It is a secret, so leave it out unless you try link creation.
 
 ### Setup
 
-1. Open the project:
-   ```bash
-   cd Examples/BasicExample
-   open BasicExample.xcodeproj
-   ```
+1. The example is the two Swift files in this folder, with no Xcode project. Create a new iOS App project in Xcode (SwiftUI interface, iOS 16 or later deployment target, the SDK's minimum), add this package (File > Add Package Dependencies, `https://github.com/LinkForty/mobile-sdk-ios`), and replace the generated app and content view files with `BasicExampleApp.swift` and `ContentView.swift`.
 
-2. Update the API configuration in `BasicExampleApp.swift`:
+2. Update the configuration in `BasicExampleApp.swift`:
    ```swift
    let config = LinkFortyConfig(
-       baseURL: URL(string: "https://your-linkforty-instance.com")!,
-       apiKey: "your-api-key-here", // Optional for self-hosted
+       baseURL: URL(string: "https://api.linkforty.com")!, // or your own server
+       apiKey: nil,                    // only for createLink(); a secret
+       appToken: "at_your_app_token",  // required on the hosted service
        debug: true
    )
    ```
 
 3. For Universal Links (optional):
-   - Enable "Associated Domains" capability
-   - Add your domain: `applinks:your-linkforty-instance.com`
-   - Ensure your backend serves the AASA file
+   - Enable the "Associated Domains" capability
+   - Add one entry per host your links are served on: `applinks:go.yourdomain.com` (the link domain in your short links, not the API `baseURL`)
+   - Ensure that host serves the AASA file
 
 4. Run the app on a device or simulator
 
@@ -108,7 +106,7 @@ BasicExample/
 ### SDK Not Initializing
 
 - Check that your `baseURL` is correct
-- Verify your API key (if using LinkForty Cloud)
+- On the hosted service, verify your `appToken`
 - Ensure your backend is running and accessible
 - Check Xcode console for error messages
 
