@@ -12,20 +12,24 @@ import Foundation
 public struct LinkFortyConfig {
     // MARK: - Properties
 
-    /// The base URL of your LinkForty instance
+    /// The LinkForty server the SDK talks to: `https://api.linkforty.com` on
+    /// the hosted service, or your own server's URL
     /// - Note: Must be HTTPS in production (HTTP allowed for localhost testing only)
     public let baseURL: URL
 
-    /// API key for LinkForty Cloud (optional for self-hosted Core)
-    /// - Note: Sent as Bearer token in Authorization header
+    /// API key, needed only for `createLink(options:)`
+    /// - Note: Sent as a Bearer token in the Authorization header when set.
+    ///   It is a secret: leave it out unless the app creates links.
     public let apiKey: String?
 
-    /// Public workspace token for LinkForty Cloud (optional)
-    /// - Note: Recommended for Cloud — required for organic installs
-    ///   (App Store discovery, social mentions, etc.) to be attributed
-    ///   to your workspace. Find it in the dashboard under Workspace
-    ///   Settings → App Token. Safe to ship in your app bundle —
-    ///   identifies the workspace only, can't authenticate API actions.
+    /// Your workspace's public app token
+    /// - Note: Required on the hosted service: it matches installs only to
+    ///   your workspace's links, puts organic installs (App Store discovery,
+    ///   social mentions, etc.) in your workspace, and lets the SDK learn
+    ///   your link domains. Find it in the dashboard under Workspace
+    ///   Settings → App Token. A self-hosted Core server doesn't need it.
+    ///   Safe to ship in your app bundle: it identifies the workspace only
+    ///   and can't authenticate API actions.
     /// - Format: `at_<32 hex chars>`
     public let appToken: String?
 
@@ -42,13 +46,13 @@ public struct LinkFortyConfig {
     /// Creates a new LinkForty configuration
     ///
     /// - Parameters:
-    ///   - baseURL: The base URL of your LinkForty instance (e.g., https://go.yourdomain.com)
-    ///   - apiKey: Optional API key for LinkForty Cloud authentication
-    ///   - appToken: Optional public workspace token (LinkForty Cloud only)
+    ///   - baseURL: The LinkForty server: `https://api.linkforty.com` on the hosted service, or your own server's URL
+    ///   - apiKey: API key, needed only for `createLink(options:)`; a secret
+    ///   - appToken: Your workspace's public app token; required on the hosted service
     ///   - debug: Enable debug logging (default: false)
     ///   - attributionWindowHours: Attribution window in hours (default: 168 = 7 days)
     ///
-    /// - Note: For self-hosted LinkForty Core, omit the apiKey and appToken parameters
+    /// - Note: For self-hosted LinkForty Core, omit `appToken`, and `apiKey` unless you use `createLink`
     public init(
         baseURL: URL,
         apiKey: String? = nil,

@@ -77,7 +77,7 @@ final class EventTrackerTests: XCTestCase {
         XCTAssertNotNil(mockNetworkManager.lastBody)
     }
 
-    // MARK: - Last-click attribution stamp (SIT-237)
+    // MARK: - Last-click attribution stamp
 
     func testOrganicEventCarriesSessionButNoLink() async throws {
         mockNetworkManager.mockResponse = EventResponse(eventId: "evt-1", acknowledged: true)
@@ -105,7 +105,7 @@ final class EventTrackerTests: XCTestCase {
         XCTAssertEqual(event.sessionId, attributionContext.currentSessionId())
     }
 
-    // MARK: - Screen Views (SIT-237)
+    // MARK: - Screen Views
 
     func testTrackScreenViewEmitsScreenViewEvent() async throws {
         mockNetworkManager.mockResponse = EventResponse(eventId: "evt-1", acknowledged: true)

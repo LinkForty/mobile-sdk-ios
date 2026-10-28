@@ -231,7 +231,7 @@ func testNoIDFACollectedByDefault() {
 **Error Handling**
 - ✅ Network error during install report
 - ✅ Invalid response format
-- ✅ 401 unauthorized (Cloud)
+- ✅ 401 unauthorized
 - ✅ 500 server error
 - ✅ Timeout
 
@@ -442,7 +442,7 @@ func testPreventDoubleInitialization() async {
 **Prerequisites**:
 - Local LinkForty Core instance running on `localhost:3000`
 - Test database with clean state
-- Test API key for Cloud tests
+- Test API key for authenticated requests
 
 **LinkForty Core Integration**
 - ✅ POST /api/sdk/v1/install (attributed response)
@@ -451,7 +451,7 @@ func testPreventDoubleInitialization() async {
 - ✅ POST /api/sdk/v1/event (invalid install ID)
 - ✅ GET /.well-known/apple-app-site-association
 
-**LinkForty Cloud Integration**
+**Authenticated Requests**
 - ✅ Authenticated requests (valid API key)
 - ✅ Authenticated requests (invalid API key)
 - ✅ Rate limiting behavior

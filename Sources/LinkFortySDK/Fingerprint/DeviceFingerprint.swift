@@ -40,10 +40,10 @@ struct DeviceFingerprint: Codable {
     /// Attribution window in hours
     let attributionWindowHours: Int
 
-    /// Optional public workspace token (LinkForty Cloud only). Lets the
-    /// server scope organic installs to the right workspace. Encoded only
-    /// when present so legacy/self-hosted servers see the same payload
-    /// they always have.
+    /// Optional public workspace token (used by the hosted service). Lets the
+    /// server scope the install to the right workspace. Encoded only when
+    /// present, so servers that don't use it see the same payload they
+    /// always have.
     let appToken: String?
 
     /// SDK platform identifier (e.g., "ios"), for backend SDK diagnostics

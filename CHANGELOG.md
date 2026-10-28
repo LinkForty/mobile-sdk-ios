@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+### Fixed
+- The privacy manifest no longer declares the system boot time API category (`NSPrivacyAccessedAPICategorySystemBootTime`, reason `35F9.1`). The SDK never reads the boot time, so the declaration was inaccurate. The `UserDefaults` declaration is unchanged.
 
 ## [1.8.0] - 2026-10-21
 ### Added
@@ -72,7 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.3.0] - 2026-05-04
 ### Added
-- `appToken` parameter on `LinkFortyConfig` for LinkForty Cloud organic-install attribution. The token is a public, workspace-scoped identifier (format: `at_<32 hex>`) safe to ship in your app bundle. When provided, it's sent on the install request so Cloud can scope organic installs (App Store discovery, social mentions, etc.) to your workspace. Self-hosted Core ignores the field. Find your token in the Cloud dashboard under Workspace Settings → App Token.
+- `appToken` parameter on `LinkFortyConfig` for organic-install attribution on the hosted service. The token is a public, workspace-scoped identifier (format: `at_<32 hex>`) safe to ship in your app bundle. When provided, it's sent on the install request so the hosted service can scope organic installs (App Store discovery, social mentions, etc.) to your workspace. Self-hosted Core ignores the field. Find your token in the dashboard under Workspace Settings → App Token.
 - `setExternalUserId(_:)` and `getExternalUserId()` on `LinkForty` for SDK-level user attribution. The set value is automatically attached to all `createLink()` calls (unless overridden per-call via `CreateLinkOptions.externalUserId`), enabling per-user deduplication and share attribution on the dashboard. Pass `nil` to clear. The value is stored in memory only and is cleared by `clearData()` and `reset()`.
 
 ## [1.2.0] - 2026-03-03

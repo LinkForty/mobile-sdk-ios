@@ -31,7 +31,7 @@ struct EventRequest: Codable {
     /// SDK release version (e.g., "1.4.0"), for backend SDK diagnostics
     let sdkVersion: String
 
-    // MARK: - Last-click attribution stamp (SIT-237)
+    // MARK: - Last-click attribution stamp
 
     /// The deep link currently credited for this event (last-click). Absent for
     /// organic activity (no deep link has opened the app).
