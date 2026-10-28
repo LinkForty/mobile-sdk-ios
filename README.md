@@ -17,7 +17,7 @@ Native iOS SDK for [LinkForty](https://github.com/LinkForty/core) — the open-s
 - **Last-Click Attribution**: In-app events are automatically credited to the deep link that most recently opened the app
 - **Screen-Flow Tracking**: Report screen views to see what users do after clicking a link
 - **Offline Support**: Events are kept on the device until the server has them, sent on the next launch or return to the foreground, and stored once however often they are retried
-- **Privacy-First**: No IDFA collection, complies with Apple's privacy requirements
+- **Privacy-First**: No IDFA, no App Tracking Transparency prompt, ships a privacy manifest
 - **Programmatic Link Creation**: Create short links directly from your app
 - **Zero Dependencies**: Lightweight, no third-party dependencies
 - **Swift-Native**: 100% Swift, modern async/await APIs
@@ -30,38 +30,26 @@ Native iOS SDK for [LinkForty](https://github.com/LinkForty/core) — the open-s
 
 ## Installation
 
-### Swift Package Manager (Recommended)
+The SDK is distributed with Swift Package Manager only. There is no CocoaPods pod or Carthage build.
 
 Add the following to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/LinkForty/mobile-sdk-ios.git", from: "1.0.0")
+    .package(url: "https://github.com/LinkForty/mobile-sdk-ios.git", from: "1.8.0")
 ]
 ```
 
 Or in Xcode:
 1. File > Add Package Dependencies
 2. Enter: `https://github.com/LinkForty/mobile-sdk-ios.git`
-3. Select version and add to your target
-
-### CocoaPods
-
-```ruby
-pod 'LinkFortySDK', '~> 1.0'
-```
-
-### Carthage
-
-```
-github "LinkForty/mobile-sdk-ios" ~> 1.0
-```
+3. Select version and add the `LinkFortySDK` library to your app target
 
 ## Quick Start
 
 ### 1. Initialize the SDK
 
-In your `AppDelegate.swift` or `@main` App struct:
+Initialize once at launch, in your `AppDelegate` or `@main` App struct:
 
 ```swift
 import LinkFortySDK
@@ -71,11 +59,9 @@ func application(_ application: UIApplication, didFinishLaunchingWithOptions lau
     Task {
         do {
             let config = LinkFortyConfig(
-                baseURL: URL(string: "https://go.yourdomain.com")!,
-                apiKey: "your-api-key",         // Optional for self-hosted
-                appToken: "at_a1b2c3d4...",     // Recommended for Cloud — enables organic-install attribution
-                debug: true,
-                attributionWindowHours: 168 // 7 days
+                baseURL: URL(string: "https://api.linkforty.com")!, // or your self-hosted server
+                appToken: "at_a1b2c3d4...",     // Required on the hosted service
+                debug: true
             )
             try await LinkForty.shared.initialize(config: config)
         } catch {
@@ -85,6 +71,18 @@ func application(_ application: UIApplication, didFinishLaunchingWithOptions lau
     return true
 }
 ```
+
+`LinkFortyConfig` fields:
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `baseURL` | (required) | The LinkForty API server: `https://api.linkforty.com` on the hosted service, or your own server's URL. Must be HTTPS (HTTP is allowed only for `localhost`). |
+| `appToken` | `nil` | Your workspace's public app token (`at_...`). **Required on the hosted service**: it limits install matching and link lookups to your workspace's links and lets organic installs be counted. Safe to ship in the app bundle. A self-hosted Core server does not use it. |
+| `apiKey` | `nil` | Only needed for [`createLink`](#6-create-links-programmatically). It is a secret: leave it out unless the app creates links. |
+| `debug` | `false` | Logs requests and SDK decisions to the console. |
+| `attributionWindowHours` | `168` (7 days) | How far back an install may be matched to a click, 1 to 2160 hours. |
+
+If the install can't be reported (for example, the device is offline on first launch), `initialize` throws and leaves the SDK uninitialized, so you can call it again later. Register `onDeferredDeepLink` and `onDeepLink` before or after `initialize`; callbacks registered first are kept.
 
 ### 2. Handle Deferred Deep Links (Install Attribution)
 
@@ -126,15 +124,56 @@ These fields are set only on a deferred deep link from a server that sends them;
 First, enable Associated Domains in your Xcode project:
 1. Select your target > Signing & Capabilities
 2. Add "Associated Domains"
-3. Add domain: `applinks:go.yourdomain.com`
+3. Add one entry per host your links are served on, for example `applinks:go.yourdomain.com`. This is the link domain in your short links, not the API `baseURL`. See [Universal Links Setup](#universal-links-setup).
 
-Then handle Universal Links:
+The SDK does not observe incoming links by itself: the app passes each URL to `handleDeepLink(url:)`. Where iOS delivers the URL depends on your app's lifecycle, so wire every entry point your app uses.
+
+**SwiftUI** (`App` lifecycle): `.onOpenURL` receives both Universal Links and custom-scheme URLs, including the one that launched the app:
 
 ```swift
-// In AppDelegate or SceneDelegate
+WindowGroup {
+    ContentView()
+        .onOpenURL { url in
+            LinkForty.shared.handleDeepLink(url: url)
+        }
+}
+```
+
+If the app also has an `.onContinueUserActivity(NSUserActivityTypeBrowsingWeb)` handler, Universal Links go there instead of `.onOpenURL`: pass `userActivity.webpageURL` to `handleDeepLink` from it.
+
+**UIKit with a `SceneDelegate`**: links that launch the app arrive in `scene(_:willConnectTo:options:)`; links that arrive while it runs come through `scene(_:continue:)` (Universal Links) and `scene(_:openURLContexts:)` (custom schemes). The `AppDelegate` methods below are not called in a scene-based app.
+
+```swift
+func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+    // ... your window setup ...
+    if let url = connectionOptions.userActivities.first(where: { $0.activityType == NSUserActivityTypeBrowsingWeb })?.webpageURL {
+        LinkForty.shared.handleDeepLink(url: url)
+    }
+    if let url = connectionOptions.urlContexts.first?.url {
+        LinkForty.shared.handleDeepLink(url: url)
+    }
+}
+
+func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
+    guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+          let url = userActivity.webpageURL else { return }
+    LinkForty.shared.handleDeepLink(url: url)
+}
+
+func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+    if let url = URLContexts.first?.url {
+        LinkForty.shared.handleDeepLink(url: url)
+    }
+}
+```
+
+**UIKit without scenes** (`AppDelegate` only):
+
+```swift
+// Universal Links
 func application(_ application: UIApplication,
-                continue userActivity: NSUserActivity,
-                restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+                 continue userActivity: NSUserActivity,
+                 restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
     guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
           let url = userActivity.webpageURL else {
         return false
@@ -144,12 +183,20 @@ func application(_ application: UIApplication,
     return true
 }
 
-// Or in SwiftUI
-.onOpenURL { url in
+// Custom URL schemes
+func application(_ app: UIApplication,
+                 open url: URL,
+                 options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
     LinkForty.shared.handleDeepLink(url: url)
+    return true
 }
+```
 
-// Register callback
+A URL passed in before `initialize` finishes (as when a link launches the app) is held and handled once the SDK is initialized.
+
+Then register a callback to receive the link data:
+
+```swift
 LinkForty.shared.onDeepLink { url, deepLinkData in
     print("Deep link opened: \(url)")
     if let data = deepLinkData {
@@ -162,7 +209,7 @@ LinkForty.shared.onDeepLink { url, deepLinkData in
 }
 ```
 
-> **Server-side resolution:** Pass every URL the app receives to `handleDeepLink`. A link on one of your workspace's link hosts is resolved via the server to provide enriched data including `deepLinkPath`, `appScheme`, and `linkId`; any other URL, custom schemes included, reaches `onDeepLink` as a local parse without a request. If the server is unreachable, the SDK falls back to local URL parsing.
+> **Server-side resolution:** Pass every URL the app receives to `handleDeepLink`. An `http(s)` URL on the `baseURL` host or on one of your workspace's link hosts is resolved via the server to provide enriched data including `deepLinkPath`, `appScheme`, and `linkId`; any other URL, custom schemes included, reaches `onDeepLink` as a local parse without a request. The SDK learns the link hosts from the server when `appToken` is set; until they are known, and without an `appToken`, every `http(s)` URL is resolved. If the server is unreachable, the SDK falls back to local URL parsing.
 
 ### 4. Track Events
 
@@ -227,18 +274,17 @@ print("Share this link: \(result.url)")
 // e.g., "https://go.yourdomain.com/tmpl/abc123"
 ```
 
-> **Note:** Requires an API key in `LinkFortyConfig`. See [API Reference](API.md#createlinkoptions) for all options.
+> **Note:** Requires an `apiKey` in `LinkFortyConfig` (without one, `createLink` throws `LinkFortyError.missingApiKey`) and a server that provides the SDK link endpoint `POST /api/sdk/v1/links`, as the hosted service does. A self-hosted Core server does not have that endpoint, and its `POST /api/links`, which the SDK falls back to, requires an `originalUrl` the SDK does not send, so `createLink` does not work against Core. See [API Reference](API.md#createlinkoptions) for all options.
 
 ## Advanced Usage
 
 ### Self-Hosted LinkForty Core
 
-If you're running your own LinkForty Core instance:
+If you're running your own LinkForty Core instance, point `baseURL` at it. Core does not use an `appToken`, and no `apiKey` is needed (`createLink` is not available against Core):
 
 ```swift
 let config = LinkFortyConfig(
     baseURL: URL(string: "https://links.yourcompany.com")!,
-    apiKey: nil, // No API key needed for self-hosted
     debug: false
 )
 try await LinkForty.shared.initialize(config: config)
@@ -248,7 +294,8 @@ try await LinkForty.shared.initialize(config: config)
 
 ```swift
 let config = LinkFortyConfig(
-    baseURL: URL(string: "https://go.yourdomain.com")!,
+    baseURL: URL(string: "https://api.linkforty.com")!,
+    appToken: "at_a1b2c3d4...",
     attributionWindowHours: 24 // 1 day instead of default 7 days
 )
 ```
@@ -267,6 +314,8 @@ if let installId = LinkForty.shared.getInstallId() {
 ```
 
 ### Event Queue Management
+
+An event that can't be sent because of a network error or a server error (5xx) is kept on the device and sent later; `trackEvent` returns normally in that case. Each request is tried up to 3 times (with 1 s and 2 s pauses) before the event is left queued. The queue holds up to 100 events and survives app restarts; it is sent after `initialize`, when the app returns to the foreground, after the next event that sends, or when you call `flushEvents()`. When the queue is full, a new event that can't be sent is dropped without an error. An event the server rejects (4xx) throws and is not queued.
 
 ```swift
 // Check queued events count
@@ -290,12 +339,14 @@ LinkForty.shared.reset()
 
 ## Universal Links Setup
 
-### 1. Create AASA File
+### 1. Serve the AASA File
 
-Your backend must serve an Apple App Site Association file at:
+Every host your links are served on must serve an Apple App Site Association file at:
 `https://go.yourdomain.com/.well-known/apple-app-site-association`
 
-Example:
+You don't upload this file: the LinkForty server generates it. On the hosted service it is served once your Apple Team ID and bundle ID are set in your app configuration. A self-hosted Core server serves it when the `IOS_TEAM_ID` and `IOS_BUNDLE_ID` environment variables are set, and answers 404 otherwise.
+
+The generated file looks like this:
 ```json
 {
   "applinks": {
@@ -311,8 +362,8 @@ Example:
 ### 2. Configure Xcode
 
 1. Enable "Associated Domains" capability
-2. Add domain: `applinks:go.yourdomain.com`
-3. Handle Universal Links in AppDelegate (see Quick Start)
+2. Add `applinks:<host>` for each host your links are served on, e.g. `applinks:go.yourdomain.com`
+3. Pass incoming links to `handleDeepLink` from every entry point your app uses (see [Handle Direct Deep Links](#3-handle-direct-deep-links-universal-links))
 
 ### 3. Test Universal Links
 
@@ -329,20 +380,28 @@ Or test manually:
 
 ### Privacy-First Design
 
-- **No IDFA**: Does not collect Identifier for Advertisers
-- **No Persistent IDs**: Uses probabilistic fingerprinting only
-- **Data Minimization**: Collects only necessary attribution data
-- **User Control**: Provides `clearData()` for user data deletion
-- **Privacy Manifest**: Includes `PrivacyInfo.xcprivacy` file
+- **No IDFA**: Does not read the Identifier for Advertisers, does not show an App Tracking Transparency prompt, and does not use SKAdNetwork
+- **Probabilistic install matching**: A deferred deep link is matched to a click from device signals and the network, not from a device ID
+- **Install ID**: The server assigns an install ID on the first launch. The SDK stores it on the device (in `UserDefaults`) and sends it with every event, so events are tied to that install
+- **User Control**: Provides `clearData()` to delete the data the SDK stores on the device
+- **Privacy Manifest**: Includes `PrivacyInfo.xcprivacy` (declares no tracking)
 
-### Data Collected (for attribution only)
+### Data Sent
 
-- Device timezone
-- Device language
-- Screen resolution
-- iOS version
-- App version
-- User-Agent string
+When the install is reported:
+
+- Device timezone and language
+- Screen resolution (in pixels)
+- iOS version and app version
+- A user-agent string made from the app name, app version and iOS version
+- The `appToken`, and the SDK name and version
+- A `deviceId`, only if your app passes one to `initialize(config:attributionWindowHours:deviceId:)`
+
+When a link is resolved on the server: timezone, language, screen resolution and iOS version.
+
+With each event: the event name and the properties your app passes, the install ID, a session ID (new on each launch and each deep link open), and the ID of the link that last opened the app and when it opened (if any).
+
+As with any network request, the server also sees the device's IP address.
 
 ### HTTPS Required
 
@@ -359,9 +418,9 @@ swift test
 Or in Xcode:
 `Cmd+U` to run all tests
 
-### Integration Tests
+### End-to-End Tests
 
-See `Tests/LinkFortySDKIntegrationTests/README.md` for setup instructions.
+See [`E2E/README.md`](E2E/README.md) for the simulator tests that run the SDK against a real LinkForty server.
 
 ## Documentation
 
@@ -375,9 +434,7 @@ See `Tests/LinkFortySDKIntegrationTests/README.md` for setup instructions.
 - [Basic Example](Examples/BasicExample/) - Simple SwiftUI app demonstrating all SDK features
 
 
-## Requirements
-
-### Backend
+## Backend
 
 This SDK requires a running LinkForty backend:
 - **LinkForty Core** (open source): Self-host for free
@@ -410,6 +467,7 @@ LinkForty iOS SDK is available under the MIT license. See [LICENSE](LICENSE) for
 | React Native | [`@linkforty/mobile-sdk-react-native`](https://github.com/LinkForty/mobile-sdk-react-native) |
 | Expo | [`@linkforty/mobile-sdk-expo`](https://github.com/LinkForty/mobile-sdk-expo) |
 | Android (Kotlin) | [LinkFortySDK](https://github.com/LinkForty/mobile-sdk-android) |
+| Flutter | [`linkforty_flutter`](https://github.com/LinkForty/mobile-sdk-flutter) |
 
 ## Related Projects
 

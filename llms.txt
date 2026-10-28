@@ -10,7 +10,9 @@
 
 ## Installation
 
-### Swift Package Manager (Recommended)
+### Swift Package Manager
+
+The SDK is distributed with Swift Package Manager only (no CocoaPods pod or Carthage build). Requires iOS 16+, Xcode 15+, Swift 5.9+.
 
 In Xcode: File → Add Package Dependencies → Enter URL:
 
@@ -18,22 +20,7 @@ In Xcode: File → Add Package Dependencies → Enter URL:
 https://github.com/linkforty/mobile-sdk-ios
 ```
 
-Select version: Up to Next Major (1.0.0).
-
-### CocoaPods
-
-```ruby
-# Podfile
-pod 'LinkFortySDK', '~> 1.0'
-```
-
-Then run `pod install`.
-
-### Carthage
-
-```
-github "LinkForty/mobile-sdk-ios" ~> 1.0
-```
+Select version: Up to Next Major (1.8.0).
 
 ## Swift Types
 
@@ -41,7 +28,7 @@ github "LinkForty/mobile-sdk-ios" ~> 1.0
 struct LinkFortyConfig {
     let baseURL: URL
     let apiKey: String?                  // nil = no link creation
-    let appToken: String?                // Cloud only — recommended; enables organic-install attribution
+    let appToken: String?                // required on the hosted service; a self-hosted Core server does not use it
     let debug: Bool                      // default: false
     let attributionWindowHours: Int      // default: 168 (7 days), range: 1-2160
 }
@@ -141,7 +128,7 @@ Initialize the SDK, report the install, and return attribution data. Must be cal
 let config = LinkFortyConfig(
     baseURL: URL(string: "https://go.yourdomain.com")!,
     apiKey: "lf_live_abc123",       // optional — only for createLink()
-    appToken: "at_a1b2c3d4...",     // recommended for Cloud — enables organic-install attribution
+    appToken: "at_a1b2c3d4...",     // required on the hosted service
     debug: true,
     attributionWindowHours: 168
 )
@@ -416,14 +403,15 @@ xcrun simctl openurl booted "https://go.yourdomain.com/abc123"
 
 ## Self-Hosted vs Cloud
 
-The only change is the `baseURL`:
-
 ```swift
-// Cloud (managed SaaS)
-let config = LinkFortyConfig(baseURL: URL(string: "https://go.linkforty.com")!)
+// Hosted service: the API host, plus your workspace's app token (required)
+let config = LinkFortyConfig(
+    baseURL: URL(string: "https://api.linkforty.com")!,
+    appToken: "at_a1b2c3d4..."
+)
 
-// Self-hosted (@linkforty/core)
+// Self-hosted (@linkforty/core): your server's URL; Core does not use an app token
 let config = LinkFortyConfig(baseURL: URL(string: "https://links.yourdomain.com")!)
 ```
 
-All SDK methods work identically with both.
+Every method works with both, except `createLink()`: it needs an `apiKey` and the SDK link endpoint (`POST /api/sdk/v1/links`), which Core does not have.
