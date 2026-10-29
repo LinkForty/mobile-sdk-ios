@@ -8,8 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+## [1.8.1] - 2026-10-29
 ### Fixed
-- The privacy manifest no longer declares the system boot time API category (`NSPrivacyAccessedAPICategorySystemBootTime`, reason `35F9.1`). The SDK never reads the boot time, so the declaration was inaccurate. The `UserDefaults` declaration is unchanged.
+- The privacy manifest no longer declares the system boot time API category (`NSPrivacyAccessedAPICategorySystemBootTime`, reason `35F9.1`). The SDK never reads the boot time, so the declaration was inaccurate. The `UserDefaults` declaration is unchanged ([#21](https://github.com/LinkForty/mobile-sdk-ios/pull/21)).
 
 ## [1.8.0] - 2026-10-21
 ### Added
