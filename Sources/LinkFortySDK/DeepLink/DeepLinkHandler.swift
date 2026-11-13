@@ -198,8 +198,20 @@ final class DeepLinkHandler {
             appToken: nil
         )
 
+        // The link's own query parameters go along, as they would on a browser
+        // click of the same link. Fingerprint parameters are the SDK's to set.
+        // A literal "+" in the link is a space, as a server reads it.
+        let linkItems = (URLComponents(url: url, resolvingAgainstBaseURL: false)?.percentEncodedQueryItems ?? [])
+            .compactMap { item -> URLQueryItem? in
+                guard let name = item.name.replacingOccurrences(of: "+", with: " ").removingPercentEncoding,
+                      let value = item.value?.replacingOccurrences(of: "+", with: " ").removingPercentEncoding,
+                      !value.isEmpty,
+                      !name.lowercased().hasPrefix("fp_") else { return nil }
+                return URLQueryItem(name: name, value: value)
+            }
+
         // Build query string
-        let queryItems: [URLQueryItem] = [
+        let queryItems: [URLQueryItem] = linkItems + [
             URLQueryItem(name: "fp_tz", value: fingerprint.timezone),
             URLQueryItem(name: "fp_lang", value: fingerprint.language),
             URLQueryItem(name: "fp_sw", value: String(fingerprint.screenWidth)),
@@ -210,7 +222,9 @@ final class DeepLinkHandler {
 
         var components = URLComponents()
         components.queryItems = queryItems
-        let queryString = components.percentEncodedQuery ?? ""
+        // URLComponents leaves "+" as is, and servers read it as a space.
+        let queryString = (components.percentEncodedQuery ?? "")
+            .replacingOccurrences(of: "+", with: "%2B")
         let endpoint = "\(resolvePath)?\(queryString)"
 
         do {

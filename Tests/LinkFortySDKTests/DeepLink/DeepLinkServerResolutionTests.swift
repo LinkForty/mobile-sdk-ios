@@ -102,6 +102,87 @@ final class DeepLinkServerResolutionTests: XCTestCase {
         XCTAssertTrue(mockNetworkManager.lastEndpoint?.hasPrefix("/api/sdk/v1/resolve/tmpl/abc123") ?? false)
     }
 
+    // MARK: - Resolve request query
+
+    /// Handles `url` with a mock network and returns the resolve endpoint requested.
+    private func resolveEndpoint(for urlString: String) -> String? {
+        let expectation = expectation(description: "Resolve \(urlString)")
+        let mockNetworkManager = MockNetworkManager()
+        mockNetworkManager.mockResponse = DeepLinkData(shortCode: "abc123", linkId: "link-uuid-1")
+
+        sut.configure(
+            networkManager: mockNetworkManager,
+            fingerprintCollector: MockFingerprintCollector(),
+            baseURL: URL(string: "https://go.example.com")!,
+            attributionContext: AttributionContext(
+                defaults: UserDefaults(suiteName: "test-dl-\(UUID().uuidString)")!
+            )
+        )
+        sut.onDeepLink { _, _ in expectation.fulfill() }
+        sut.handleDeepLink(URL(string: urlString)!)
+
+        wait(for: [expectation], timeout: 2.0)
+        return mockNetworkManager.lastEndpoint
+    }
+
+    /// The decoded query of a requested endpoint, as a server would read it ("+" is a space).
+    private func query(of endpoint: String?) -> [String: String] {
+        guard let endpoint = endpoint, let start = endpoint.firstIndex(of: "?") else { return [:] }
+        var result: [String: String] = [:]
+        for pair in endpoint[endpoint.index(after: start)...].split(separator: "&") {
+            let parts = pair.split(separator: "=", maxSplits: 1).map {
+                String($0).replacingOccurrences(of: "+", with: " ").removingPercentEncoding ?? String($0)
+            }
+            result[parts[0]] = parts.count > 1 ? parts[1] : ""
+        }
+        return result
+    }
+
+    func testResolvePassesTheLinksQueryParametersWithTheFingerprint() {
+        let endpoint = resolveEndpoint(for: "https://go.example.com/abc123?os_id=u1&utm_campaign=winback")
+
+        XCTAssertTrue(endpoint?.hasPrefix("/api/sdk/v1/resolve/abc123?") ?? false)
+        XCTAssertEqual(query(of: endpoint), [
+            "os_id": "u1",
+            "utm_campaign": "winback",
+            "fp_tz": "America/New_York",
+            "fp_lang": "en-US",
+            "fp_sw": "1170",
+            "fp_sh": "2532",
+            "fp_platform": "iOS",
+            "fp_pv": "15.0"
+        ])
+    }
+
+    func testResolveKeepsItsOwnFingerprintOverFpParametersOnTheLink() {
+        let query = query(of: resolveEndpoint(for: "https://go.example.com/abc123?fp_tz=evil&FP_LANG=evil&os_id=u1"))
+
+        XCTAssertEqual(query["fp_tz"], "America/New_York")
+        XCTAssertEqual(query["fp_lang"], "en-US")
+        XCTAssertNil(query["FP_LANG"])
+        XCTAssertEqual(query["os_id"], "u1")
+    }
+
+    func testResolveEncodesValuesOnce() {
+        let query = query(of: resolveEndpoint(for: "https://go.example.com/abc123?note=a%20b%26c&email=a%2Bb%40example.com"))
+
+        XCTAssertEqual(query["note"], "a b&c")
+        XCTAssertEqual(query["email"], "a+b@example.com")
+    }
+
+    func testResolveReadsALiteralPlusInTheLinkAsASpace() {
+        let query = query(of: resolveEndpoint(for: "https://go.example.com/abc123?iterable_id=a+b%40x.com&email=c%2Bd%40x.com"))
+
+        XCTAssertEqual(query["iterable_id"], "a b@x.com")
+        XCTAssertEqual(query["email"], "c+d@x.com")
+    }
+
+    func testResolveSendsOnlyTheFingerprintForALinkWithNoQuery() {
+        let query = query(of: resolveEndpoint(for: "https://go.example.com/abc123"))
+
+        XCTAssertEqual(query.keys.sorted(), ["fp_lang", "fp_platform", "fp_pv", "fp_sh", "fp_sw", "fp_tz"])
+    }
+
     func testHandleDeepLinkServerResolutionFallsBackOnError() {
         // Arrange
         let expectation = expectation(description: "Fallback on error")
