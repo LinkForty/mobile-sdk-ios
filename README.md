@@ -209,7 +209,7 @@ LinkForty.shared.onDeepLink { url, deepLinkData in
 }
 ```
 
-> **Server-side resolution:** Pass every URL the app receives to `handleDeepLink`. An `http(s)` URL on the `baseURL` host or on one of your workspace's link hosts is resolved via the server to provide enriched data including `deepLinkPath`, `appScheme`, and `linkId`; any other URL, custom schemes included, reaches `onDeepLink` as a local parse without a request. The SDK learns the link hosts from the server when `appToken` is set; until they are known, and without an `appToken`, every `http(s)` URL is resolved. If the server is unreachable, the SDK falls back to local URL parsing.
+> **Server-side resolution:** Pass every URL the app receives to `handleDeepLink`. An `http(s)` URL on the `baseURL` host or on one of your workspace's link hosts is resolved via the server to provide enriched data including `deepLinkPath`, `appScheme`, and `linkId` (the link's query parameters go along with the request, so the click is recorded with the same parameters a browser click of the link would carry); any other URL, custom schemes included, reaches `onDeepLink` as a local parse without a request. The SDK learns the link hosts from the server when `appToken` is set; until they are known, and without an `appToken`, every `http(s)` URL is resolved. If the server is unreachable, the SDK falls back to local URL parsing.
 
 ### 4. Track Events
 
@@ -399,7 +399,7 @@ When the install is reported:
 - The `appToken`, and the SDK name and version
 - A `deviceId`, only if your app passes one to `initialize(config:attributionWindowHours:deviceId:)`
 
-When a link is resolved on the server: timezone, language, screen resolution and iOS version.
+When a link is resolved on the server: the link's path and query parameters, with timezone, language, screen resolution and iOS version.
 
 With each event: the event name and the properties your app passes, the install ID, a session ID (new on each launch and each deep link open), and the ID of the link that last opened the app and when it opened (if any).
 

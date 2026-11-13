@@ -169,6 +169,33 @@ final class DeepLinkHandler {
 
     // MARK: - Private Methods
 
+    /// The resolve request's query: the link's own query parameters, as they
+    /// would go along on a browser click of the same link, then the fingerprint.
+    /// Fingerprint parameters are the SDK's to set, so `fp_` parameters on the
+    /// link are dropped. A literal "+" in the link is a space, as a server reads it.
+    static func resolveQuery(for url: URL, fingerprint: DeviceFingerprint) -> String {
+        let linkItems = (URLComponents(url: url, resolvingAgainstBaseURL: false)?.percentEncodedQueryItems ?? [])
+            .compactMap { item -> URLQueryItem? in
+                guard let name = item.name.replacingOccurrences(of: "+", with: " ").removingPercentEncoding,
+                      let value = item.value?.replacingOccurrences(of: "+", with: " ").removingPercentEncoding,
+                      !value.isEmpty,
+                      !name.lowercased().hasPrefix("fp_") else { return nil }
+                return URLQueryItem(name: name, value: value)
+            }
+
+        var components = URLComponents()
+        components.queryItems = linkItems + [
+            URLQueryItem(name: "fp_tz", value: fingerprint.timezone),
+            URLQueryItem(name: "fp_lang", value: fingerprint.language),
+            URLQueryItem(name: "fp_sw", value: String(fingerprint.screenWidth)),
+            URLQueryItem(name: "fp_sh", value: String(fingerprint.screenHeight)),
+            URLQueryItem(name: "fp_platform", value: fingerprint.platform),
+            URLQueryItem(name: "fp_pv", value: fingerprint.platformVersion)
+        ]
+        // URLComponents leaves "+" as is, and servers read it as a space.
+        return (components.percentEncodedQuery ?? "").replacingOccurrences(of: "+", with: "%2B")
+    }
+
     /// Resolves a URL via the server, falling back to local data on failure
     private func resolveURL(_ url: URL, fallback: DeepLinkData?) async -> DeepLinkData? {
         guard let networkManager = networkManager,
@@ -198,19 +225,7 @@ final class DeepLinkHandler {
             appToken: nil
         )
 
-        // Build query string
-        let queryItems: [URLQueryItem] = [
-            URLQueryItem(name: "fp_tz", value: fingerprint.timezone),
-            URLQueryItem(name: "fp_lang", value: fingerprint.language),
-            URLQueryItem(name: "fp_sw", value: String(fingerprint.screenWidth)),
-            URLQueryItem(name: "fp_sh", value: String(fingerprint.screenHeight)),
-            URLQueryItem(name: "fp_platform", value: fingerprint.platform),
-            URLQueryItem(name: "fp_pv", value: fingerprint.platformVersion)
-        ]
-
-        var components = URLComponents()
-        components.queryItems = queryItems
-        let queryString = components.percentEncodedQuery ?? ""
+        let queryString = Self.resolveQuery(for: url, fingerprint: fingerprint)
         let endpoint = "\(resolvePath)?\(queryString)"
 
         do {
