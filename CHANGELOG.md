@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-11-12
+### Added
+- When a LinkForty link opens the app, the resolve request carries the link's own query parameters along with the fingerprint, so the click is recorded with the same parameters a browser click of the link would carry: its UTM tags, and any other parameter the server reads. A literal `+` in the link is read as a space and `%2B` as `+`, as a server reads them. The SDK's own `fp_` values replace any `fp_` parameter on the link. A server that ignores extra parameters behaves as before ([#24](https://github.com/LinkForty/mobile-sdk-ios/pull/24)).
+
+### Fixed
+- The README and API.md `trackEvent` purchase examples put the amount in `revenue`, the property revenue reports read ([#23](https://github.com/LinkForty/mobile-sdk-ios/pull/23)).
+
 ## [1.8.1] - 2026-10-29
 ### Fixed
 - The privacy manifest no longer declares the system boot time API category (`NSPrivacyAccessedAPICategorySystemBootTime`, reason `35F9.1`). The SDK never reads the boot time, so the declaration was inaccurate. The `UserDefaults` declaration is unchanged ([#21](https://github.com/LinkForty/mobile-sdk-ios/pull/21)).

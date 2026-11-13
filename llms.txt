@@ -20,7 +20,7 @@ In Xcode: File → Add Package Dependencies → Enter URL:
 https://github.com/linkforty/mobile-sdk-ios
 ```
 
-Select version: Up to Next Major (1.8.0).
+Select version: Up to Next Major (1.9.0).
 
 ## Swift Types
 
